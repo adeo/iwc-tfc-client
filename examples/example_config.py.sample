@@ -1,0 +1,6 @@
+
+org_id = "xxxxxx"
+token = "xXxXxXxXxXxXxXxX"
+github_oauth = "ot-xxxxxxxxxxx"
+null_resource_project = "xxxx/yyyyyyyyyyyyyy"
+test_ws_prefix = "tfc-client-test-"

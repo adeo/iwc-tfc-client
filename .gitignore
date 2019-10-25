@@ -21,3 +21,4 @@ htmlcov
 *.bak
 .eggs
 *.egg-info
+examples/example_config.py

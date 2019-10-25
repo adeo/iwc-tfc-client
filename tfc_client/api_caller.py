@@ -5,13 +5,6 @@ from typing import cast
 
 import requests
 
-# from .models.api import ApiResponse
-# from .models.organization import OrganizationModel
-# from .models.workspace import WorkspaceModel
-
-# MODEL_TYPE_MAPPING = {"organizations": OrganizationModel, "workspaces": WorkspaceModel}
-
-
 class APICaller(object):
     def __init__(self, host, base_url, headers=None):
         self._host = host

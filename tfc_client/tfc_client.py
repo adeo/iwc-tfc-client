@@ -251,7 +251,7 @@ class TFCObject(object):
     def wait_run(self, sleep_time=3, timeout=60):
         if self.type == "runs":
             start_time = time.time()
-
+            # TODO : wait terraform to re-working correctly to continu debug on this method
             while True:
                 if self.status != "planning":
                     print('new status:', self.status)
