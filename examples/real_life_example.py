@@ -5,7 +5,8 @@ import time
 
 from tfc_client import TFCClient
 
-from example_config import org_id, token, github_oauth, null_resource_project, test_ws_prefix
+from tfc_client.models.vcs_repo import VCSRepoModel
+from tfc_client.models.workspace import WorkspaceModel
 
 
 from example_config import (
@@ -44,21 +45,22 @@ for ws in tfc.workspaces:
     if count >= 5:
         break
 
+
 ws_name = "{}{:05d}".format(test_ws_prefix, randint(1, 99999))
 print(f"Creating workspace {ws_name}")
-workspace = {
-    "name": ws_name,
-    "terraform-version": "0.11.10",
-    "working-directory": "",
-    "vcs-repo": {
-        "identifier": null_resource_project,
-        "oauth-token-id": github_oauth,
-        "branch": "master",
-        "default-branch": True,
-    },
-}
 
-new_ws = tfc.create_workspace(workspace)
+vcs_repo = VCSRepoModel(
+    identifier=null_resource_project,
+    oauth_token_id=github_oauth,
+    branch="master",
+    default_branch=True,
+)
+
+workspace_to_create = WorkspaceModel(
+    name=ws_name, terraform_version="0.11.10", working_directory="", vcs_repo=vcs_repo
+)
+
+new_ws = tfc.create_workspace(workspace_to_create)
 
 ws_by_id = tfc.workspace(workspace_id=new_ws.id)
 print("ws_by_id:", ws_by_id.name)

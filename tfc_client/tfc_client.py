@@ -212,16 +212,13 @@ class TFCObject(object):
         else:
             raise AttributeError("workspaces")
 
-    def create_workspace(self, payload):
+    def create_workspace(self, workspace_model):
         if self.type == "organizations":
             ws = WorkspaceRootModel(
-                data=WorkspaceDataModel(
-                    type="workspaces", attributes=WorkspaceModel(**payload)
-                )
+                data=WorkspaceDataModel(type="workspaces", attributes=workspace_model)
             )
             data, meta, links = self.client._api.post(
-                path=f"organizations/{self.name}/workspaces",
-                data=ws.json(by_alias=True, exclude_unset=True),
+                path=f"organizations/{self.name}/workspaces", data=ws.json()
             )
             ws = TFCObject(self.client, data)
             self.attrs["workspaces"][ws.id] = ws
