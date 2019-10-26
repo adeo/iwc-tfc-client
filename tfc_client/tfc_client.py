@@ -2,8 +2,8 @@ from collections.abc import Mapping, Iterable
 import time
 
 from .api_caller import APICaller
-from .models.workspace import WorkspaceRootModel, WorkspaceDataModel, WorkspaceModel
 from .models.relationship import RelationshipsModel
+from .models.workspace import WorkspaceRootModel, WorkspaceDataModel, WorkspaceModel
 from .models.run import RunRootModel, RunDataModel, RunModel
 from .models.var import VarRootModel, VarDataModel, VarModel
 
@@ -159,9 +159,7 @@ class TFCObject(object):
                 )
             )
 
-            data, meta, links = self.client._api.post(
-                path=f"vars", data=run.json(by_alias=True, exclude_unset=True)
-            )
+            data, meta, links = self.client._api.post(path=f"vars", data=run.json())
             var = TFCObject(self.client, data)
             self.attrs["vars"][var.id] = var
             return var
@@ -254,10 +252,10 @@ class TFCObject(object):
             # TODO : wait terraform to re-working correctly to continu debug on this method
             while True:
                 if self.status != "planning":
-                    print('new status:', self.status)
+                    print("new status:", self.status)
                     # break
                 else:
-                    print('status:', self.status)
+                    print("status:", self.status)
 
                 if (time.time() - start_time) > timeout:
                     break
@@ -285,9 +283,7 @@ class TFCObject(object):
                     ),
                 )
             )
-            data, meta, links = self.client._api.post(
-                path=f"runs", data=run.json(by_alias=True, exclude_unset=True)
-            )
+            data, meta, links = self.client._api.post(path=f"runs", data=run.json())
             run = TFCObject(self.client, data)
             self.attrs["runs"][run.id] = run
             return run

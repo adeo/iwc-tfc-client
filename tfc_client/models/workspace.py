@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from typing import Optional, List
-from . import KebabCaseModel
+from . import KebabCaseBaseModel
 
 from .vcs_repo import VCSRepoModel
 
-class WorkspacePermissionsModel(KebabCaseModel):
+
+class WorkspacePermissionsModel(KebabCaseBaseModel):
     can_update: bool
     can_destroy: bool
     can_queue_destroy: bool
@@ -18,12 +19,11 @@ class WorkspacePermissionsModel(KebabCaseModel):
     can_read_settings: bool
 
 
-
-class WorkspaceActionsModel(KebabCaseModel):
+class WorkspaceActionsModel(KebabCaseBaseModel):
     is_destroyable: bool
 
 
-class WorkspaceModel(KebabCaseModel):
+class WorkspaceModel(KebabCaseBaseModel):
     name: str
     auto_apply: bool = False
     environment: Optional[str]
@@ -45,11 +45,11 @@ class WorkspaceModel(KebabCaseModel):
     source_url: Optional[str]
 
 
-class WorkspaceDataModel(KebabCaseModel):
+class WorkspaceDataModel(KebabCaseBaseModel):
     id: Optional[str]
     type: str = "workspaces"
     attributes: Optional[WorkspaceModel]
 
 
-class WorkspaceRootModel(KebabCaseModel):
+class WorkspaceRootModel(KebabCaseBaseModel):
     data: WorkspaceDataModel

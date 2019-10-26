@@ -7,6 +7,15 @@ from tfc_client import TFCClient
 
 from example_config import org_id, token, github_oauth, null_resource_project, test_ws_prefix
 
+
+from example_config import (
+    org_id,
+    token,
+    github_oauth,
+    null_resource_project,
+    test_ws_prefix,
+)
+
 # logging.basicConfig(level=logging.DEBUG)
 
 client = TFCClient(token)

@@ -1,8 +1,8 @@
 from typing import Optional
 
-from . import KebabCaseModel
+from . import KebabCaseBaseModel
 from .workspace import WorkspaceRootModel
 
 
-class RelationshipsModel(KebabCaseModel):
+class RelationshipsModel(KebabCaseBaseModel):
     workspace: Optional[WorkspaceRootModel]

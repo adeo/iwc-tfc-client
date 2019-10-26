@@ -5,6 +5,7 @@ from typing import cast
 
 import requests
 
+
 class APICaller(object):
     def __init__(self, host, base_url, headers=None):
         self._host = host
@@ -18,15 +19,17 @@ class APICaller(object):
         else:
             url = "/".join([self._host, self._base_url, path])
 
-        response = requester(
-            url=url, headers=self._headers, **kwargs
-        )
+        response = requester(url=url, headers=self._headers, **kwargs)
 
         response_json = response.json()
         if method in ["get", "post", "patch", "put"]:
             if response_json:
                 if "data" in response_json:
-                    return response_json["data"], response_json.get("meta"), response_json.get("links"),
+                    return (
+                        response_json["data"],
+                        response_json.get("meta"),
+                        response_json.get("links"),
+                    )
                 elif "errors" in response_json:
                     message = "TFE API return errors:"
                     message += str(response_json)
@@ -81,7 +84,9 @@ class APICaller(object):
         if isinstance(data, Mapping):
             return data
         else:
-            raise Exception("data haven't exactly one element ({} found)".format(len(data)))
+            raise Exception(
+                "data haven't exactly one element ({} found)".format(len(data))
+            )
 
     def put(self, *args, **kwargs):
         return self._call(method="put", **kwargs)

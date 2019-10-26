@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from typing import Optional
 
-from . import KebabCaseModel
+from . import KebabCaseBaseModel
 
 
-class VCSRepoModel(KebabCaseModel):
-    branch: str
+class VCSRepoModel(KebabCaseBaseModel):
+    branch: Optional[str]
     ingress_submodules: Optional[bool]
     identifier: str
     display_identifier: Optional[str]
