@@ -1,6 +1,9 @@
 
 org_id = "xxxxxx"
-token = "xXxXxXxXxXxXxXxX"
+team_token = "xXxXxXxXxXxXxXxX"
 github_oauth = "ot-xxxxxxxxxxx"
 null_resource_project = "xxxx/yyyyyyyyyyyyyy"
 test_ws_prefix = "tfc-client-test-"
+test_org_prefix = "test-org-"
+user_token = "YyYyYyYyYyYyYy"
+test_org_email = "me@email.com"

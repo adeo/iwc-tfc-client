@@ -6,6 +6,11 @@ from .models.relationship import RelationshipsModel
 from .models.workspace import WorkspaceRootModel, WorkspaceDataModel, WorkspaceModel
 from .models.run import RunRootModel, RunDataModel, RunModel
 from .models.var import VarRootModel, VarDataModel, VarModel
+from .models.organization import (
+    OrganizationRootModel,
+    OrganizationDataModel,
+    OrganizationModel,
+)
 
 # Factory genere object avec auth
 # instance de factory pour une orga pour requeter TFE
@@ -35,6 +40,18 @@ class TFCClient(object):
 
     def get_run(self, id):
         return self.get("runs", id)
+
+    def create_organization(self, organization_model):
+        payload = OrganizationRootModel(
+            data=OrganizationDataModel(
+                type="organizations", attributes=organization_model
+            )
+        )
+        data, meta, links = self._api.post(path=f"organizations", data=payload.json())
+        return TFCObject(self, data)
+
+    def delete_organization(self, organization_name):
+        self._api.delete(path=f"organizations/{organization_name}")
 
 
 class TFCObject(object):
@@ -140,6 +157,7 @@ class TFCObject(object):
         self, key, value, category="terraform", sensitive=False, hcl=False
     ):
         if self.type == "workspaces":
+            # TODO : Need rework
             payload = {
                 "key": key,
                 "value": value,
@@ -214,11 +232,11 @@ class TFCObject(object):
 
     def create_workspace(self, workspace_model):
         if self.type == "organizations":
-            ws = WorkspaceRootModel(
+            payload = WorkspaceRootModel(
                 data=WorkspaceDataModel(type="workspaces", attributes=workspace_model)
             )
             data, meta, links = self.client._api.post(
-                path=f"organizations/{self.name}/workspaces", data=ws.json()
+                path=f"organizations/{self.name}/workspaces", data=payload.json()
             )
             ws = TFCObject(self.client, data)
             self.attrs["workspaces"][ws.id] = ws

@@ -7,22 +7,39 @@ from tfc_client import TFCClient
 
 from tfc_client.models.vcs_repo import VCSRepoModel
 from tfc_client.models.workspace import WorkspaceModel
+from tfc_client.models.organization import OrganizationModel
 
 
 from example_config import (
     org_id,
-    token,
+    user_token,
+    team_token,
     github_oauth,
     null_resource_project,
     test_ws_prefix,
+    test_org_prefix,
+    test_org_email,
 )
 
 # logging.basicConfig(level=logging.DEBUG)
 
-client = TFCClient(token)
-tfc = client.get_organization(org_id)
 
-print("Connected on organization id:", tfc.name)
+admin_client = TFCClient(user_token)
+
+org_name = "{}{:05d}".format(test_org_prefix, randint(1, 99999))
+print(f"Creating organization '{org_name}'")
+org_model = OrganizationModel(name=org_name, email=test_org_email)
+admin_client.create_organization(org_model)
+
+input("Press Enter to continue...")
+
+print(f"Delete organization '{org_name}'")
+
+admin_client.delete_organization(org_name)
+
+
+tfc = TFCClient(team_token).get_organization(org_id)
+print(f"Now connected on organization '{tfc.name}' with Team Token")
 
 print("List the 5 first workspaces")
 count = 0
