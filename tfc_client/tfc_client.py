@@ -12,10 +12,6 @@ from .models.organization import (
     OrganizationModel,
 )
 
-# Factory genere object avec auth
-# instance de factory pour une orga pour requeter TFE
-# request depuis orga ou avec id direct sur instance de factory pour requeter TFE
-
 
 class TFCClient(object):
     def __init__(self, token: str, url: str = "https://app.terraform.io"):
@@ -32,14 +28,18 @@ class TFCClient(object):
     def get(self, object_type, id):
         return TFCObject(self, {"type": object_type, "id": id})
 
-    def get_organization(self, id):
-        return self.get("organizations", id)
-
-    def get_workspace(self, id):
-        return self.get("workspaces", id)
-
-    def get_run(self, id):
-        return self.get("runs", id)
+    def __getattr__(self, attr):
+        if attr.startswith("get_"):
+            object_type = attr[4:].translate({ord("_"): ord("-")})
+            if object_type == "apply":
+                object_type == "applies"
+            else:
+                object_type += "s"
+            def _get_object_type(*args, **kwargs):
+                return self.get(object_type, id=kwargs['id'] if "id" in kwargs else args[0])
+            return _get_object_type
+        else:
+            raise AttributeError(attr)
 
     def create_organization(self, organization_model):
         payload = OrganizationRootModel(

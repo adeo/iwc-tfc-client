@@ -33,13 +33,17 @@ admin_client.create_organization(org_model)
 
 input("Press Enter to continue...")
 
-print(f"Delete organization '{org_name}'")
 
-admin_client.delete_organization(org_name)
+client = TFCClient(team_token)
 
+print(f"OAuth-token: {github_oauth}")
+ot = client.get_oauth_token(github_oauth)
+print(ot.created_at)
+exit()
 
-tfc = TFCClient(team_token).get_organization(org_id)
+tfc = client.get_organization(org_id)
 print(f"Now connected on organization '{tfc.name}' with Team Token")
+
 
 print("List the 5 first workspaces")
 count = 0

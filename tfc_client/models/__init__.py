@@ -2,9 +2,7 @@ from pydantic import BaseModel
 
 
 def underscore_to_dash(string):
-    dash = ord("-")
-    underscore = ord("_")
-    return string.translate({underscore: dash})
+    return string.translate({ord("_"): ord("-")})
 
 
 class KebabCaseBaseModel(BaseModel):
