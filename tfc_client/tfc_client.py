@@ -52,7 +52,7 @@ class TFCClient(object):
         data, meta, links = self._api.post(path=f"organizations", data=payload.json())
         return TFCObject(self, data)
 
-    def delete_organization(self, organization_name):
+    def destroy_organization(self, organization_name):
         self._api.delete(path=f"organizations/{organization_name}")
 
 
