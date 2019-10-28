@@ -26,10 +26,12 @@ class APICaller(object):
             response_json = response.json()
             if response_json:
                 if "data" in response_json:
+                    # TODO : Create a APIResponse object instead of returning a tuple
                     return (
                         response_json["data"],
                         response_json.get("meta"),
                         response_json.get("links"),
+                        response_json.get("included"),
                     )
                 elif "errors" in response_json:
                     message = f"TFE API return errors {response.status_code}:"
@@ -44,53 +46,61 @@ class APICaller(object):
             message += response.data
         raise Exception()
 
-    def get_paginated(self, page_size=20, page_number=1, *args, **kwargs):
-        params = dict()
+    @staticmethod
+    def _dict_to_params(object_name, object_content):
+        filters = {}
+        for object_type, content in object_content.items():
+            for field_name, field_value in content.items():
+                filters[f"{object_name}[{object_type}][{field_name}]"] = field_value
+        return filters
+
+    def get_list(
+        self,
+        params=None,
+        page_number=1,
+        page_size=20,
+        filters=None,
+        include=None,
+        *args,
+        **kwargs,
+    ):
+        if not params:
+            params = dict()
+        if filters:
+            params.extend(self._dict_to_params("filter", filters))
+
         if page_size:
             params["page[size]"] = page_size
         if page_number:
             params["page[number]"] = page_number
-        return self.get_list(params=params, *args, **kwargs)
+        if include:
+            params["include"] = include
 
-    def get_filtered(self, workspace=None, organization=None, *args, **kwargs):
-        params = dict()
-        if workspace:
-            params["filter[workspace][name]"] = workspace
-        if organization:
-            params["filter[organization][name]"] = organization
-        return self.get_list(params=params, *args, **kwargs)
-
-    def get_list(self, params=None, *args, **kwargs):
-        if not params:
-            params = dict()
-
-        data, meta, links = self._call(method="get", params=params, **kwargs)
+        data, meta, links, included = self._call(method="get", params=params, **kwargs)
 
         if isinstance(data, Iterable):
             while True:
-                for data_item in data:
-                    yield data_item
+                yield data, meta, links, included
 
                 if meta and "pagination" in meta:
                     params["page[number]"] = meta["pagination"].get("next-page")
                     if params["page[number]"]:
-                        data, meta, links = self._call(
+                        data, meta, links, included = self._call(
                             method="get", params=params, **kwargs
                         )
                         continue
 
                 break
         else:
-            raise Exception("data is not a list nor a mapping")
+            raise Exception("data is not a list")
 
-    def get_one(self, *args, **kwargs):
-        data, meta, links = self._call(method="get", **kwargs)
-        if isinstance(data, Mapping):
-            return data
-        else:
-            raise Exception(
-                "data haven't exactly one element ({} found)".format(len(data))
-            )
+    def get_raw(self, path, *args, **kwargs):
+        response = requests.get(path)
+        if response.status_code < 400:
+            return response.text
+
+    def get(self, *args, **kwargs):
+        return self._call(method="get", **kwargs)
 
     def put(self, *args, **kwargs):
         return self._call(method="put", **kwargs)

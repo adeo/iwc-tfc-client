@@ -1,4 +1,6 @@
 from collections.abc import Mapping, Iterable
+import hashlib
+import re
 import time
 
 import inflection
@@ -49,7 +51,9 @@ class TFCClient(object):
                 type="organizations", attributes=organization_model
             )
         )
-        data, meta, links = self._api.post(path=f"organizations", data=payload.json())
+        data, meta, links, included = self._api.post(
+            path=f"organizations", data=payload.json()
+        )
         return TFCObject(self, data)
 
     def destroy_organization(self, organization_name):
@@ -57,7 +61,7 @@ class TFCClient(object):
 
 
 class TFCObject(object):
-    def __init__(self, client, data):
+    def __init__(self, client, data, include=None):
         self.client = client
         self.attrs = dict()
         self.attrs["workspaces"] = dict()
@@ -66,6 +70,14 @@ class TFCObject(object):
         self.id = data["id"]
         self.type = data["type"]
         self._init_from_data(data)
+
+        if include and isinstance(include, Iterable):
+            for included_data in include:
+                for rel_name, rel in self.relationships.items():
+                    if rel.id == included_data["id"]:
+                        self.relationships[rel_name] = TFCObject(
+                            self.client, included_data
+                        )
 
     def _init_from_data(self, data):
         if "attributes" in data:
@@ -82,7 +94,7 @@ class TFCObject(object):
             else:
                 data_url = f"{self.type}/{self.id}"
 
-            data = self.client._api.get_one(path=data_url)
+            data, meta, links, included = self.client._api.get(path=data_url)
             self._init_from_data(data)
 
     def refresh(self):
@@ -100,6 +112,27 @@ class TFCObject(object):
     @attributes.setter
     def attributes(self, attributes_dict):
         self.attrs["attributes"] = attributes_dict
+
+    @property
+    def status_counts(self):
+        if self.type == "organizations":
+            if "status-counts" not in self.attrs:
+                data, meta, links, included = self.client._api.get(
+                    path=f"organizations/{self.name}/workspaces",
+                    params={"page[size]": 1},
+                )
+                if "status-counts" in meta:
+                    self.attrs["status-counts"] = meta["status-counts"]
+            return self.attrs.get("status-counts", {})
+        else:
+            raise AttributeError("status_counts")
+
+    @status_counts.setter
+    def status_counts(self, status_counts_dict):
+        if self.type == "organizations":
+            self.attrs["status-counts"] = status_counts_dict
+        else:
+            raise AttributeError("status_counts")
 
     @property
     def relationships(self):
@@ -136,8 +169,12 @@ class TFCObject(object):
         if self.type == "workspaces":
             if "vars" not in self.attrs:
                 organization = self.relationships["organization"]
-                self.variables = self.client._api.get_filtered(
-                    path="vars", workspace=self.name, organization=organization.name
+                self.variables, meta, links, included = self.client._api.get_list(
+                    path="vars",
+                    filters={
+                        "workspace": {"name": self.name},
+                        "organization": {"name": organization.name},
+                    },
                 )
             return self.attrs["vars"]
         else:
@@ -176,7 +213,9 @@ class TFCObject(object):
                 )
             )
 
-            data, meta, links = self.client._api.post(path=f"vars", data=payload.json())
+            data, meta, links, included = self.client._api.post(
+                path=f"vars", data=payload.json()
+            )
             var = TFCObject(self.client, data)
             self.attrs["vars"][var.id] = var
             return var
@@ -187,45 +226,74 @@ class TFCObject(object):
     def workspaces(self):
         if self.type == "organizations":
             organization = self.name
-            for ws in self.client._api.get_paginated(
+            for data, meta, links, included in self.client._api.get_list(
                 path=f"organizations/{organization}/workspaces"
             ):
-                ws_id = ws["id"]
-                self.attrs["workspaces"][ws_id] = TFCObject(self.client, ws)
-                yield self.attrs["workspaces"][ws_id]
+                for ws in data:
+                    ws_id = ws["id"]
+                    self.attrs["workspaces"][ws_id] = TFCObject(self.client, ws)
+                    yield self.attrs["workspaces"][ws_id]
         else:
             raise AttributeError("workspaces")
 
-    def workspace(self, *, workspace_id=None, workspace_name=None):
+    def workspaces_with_include(self, include_relationship):
         if self.type == "organizations":
-            assert not (
-                workspace_id and workspace_name
-            ), "You must choose between workspace_id= and workspace_name="
-            if workspace_name:
-                ws_ids = [
-                    ws_id
-                    for ws_id, ws in self.attrs["workspaces"].items()
-                    if ws.name == workspace_name
-                ]
-                workspace_id = ws_ids[0]
-            elif not workspace_id:
-                raise AttributeError("workspace_id or workspace_name must be specified")
+            organization = self.name
+            for data, meta, links, included in self.client._api.get_list(
+                path=f"organizations/{organization}/workspaces",
+                include=inflection.underscore(include_relationship),
+            ):
+                for ws in data:
+                    ws_id = ws["id"]
 
-            if workspace_id and workspace_id not in self.attrs["workspaces"]:
+                    try:
+                        included_relationship_id = ws["relationships"][
+                            include_relationship
+                        ]["data"]["id"]
+
+                        included_relationship_data = [
+                            include
+                            for include in included
+                            if include["id"] == included_relationship_id
+                        ]
+                    except (KeyError, TypeError):
+                        included_relationship_data = None
+
+                    if included_relationship_data:
+                        self.attrs["workspaces"][ws_id] = TFCObject(
+                            self.client, ws, include=included_relationship_data
+                        )
+                    else:
+                        self.attrs["workspaces"][ws_id] = TFCObject(self.client, ws)
+                    yield self.attrs["workspaces"][ws_id]
+        else:
+            raise AttributeError("workspaces")
+
+    def workspace(self, workspace_name):
+        if self.type == "organizations":
+            workspace_id = None
+            ws_ids = [
+                ws_id
+                for ws_id, ws in self.attrs["workspaces"].items()
+                if ws.name == workspace_name
+            ]
+            if ws_ids:
+                workspace_id = ws_ids[0]
+
+            if workspace_id:
+                return self.attrs["workspaces"][workspace_id]
+            else:
                 ws = TFCObject(
                     self.client,
-                    self.client._api.get_one(path=f"workspaces/{workspace_id}"),
-                )
-                self.attrs["workspaces"][ws.id] = ws
-            elif workspace_name and not ws_ids:
-                ws = TFCObject(
-                    self.client,
-                    self.client._api.get_one(
+                    self.client._api.get(
                         path=f"organizations/{self.name}/workspaces/{workspace_name}"
                     ),
                 )
                 self.attrs["workspaces"][ws.id] = ws
-            return self.attrs["workspaces"].get(workspace_id)
+            data, self.meta, links, included = self.attrs["workspaces"].get(
+                workspace_id
+            )
+            return data
         else:
             raise AttributeError("workspaces")
 
@@ -234,7 +302,7 @@ class TFCObject(object):
             payload = WorkspaceRootModel(
                 data=WorkspaceDataModel(type="workspaces", attributes=workspace_model)
             )
-            data, meta, links = self.client._api.post(
+            data, meta, links, included = self.client._api.post(
                 path=f"organizations/{self.name}/workspaces", data=payload.json()
             )
             ws = TFCObject(self.client, data)
@@ -260,11 +328,23 @@ class TFCObject(object):
         else:
             raise AttributeError("apply")
 
+    def discard(self, comment=None):
+        if self.type == "runs":
+            self.client._api.post(
+                path=f"runs/{self.id}/actions/discard",
+                json={"comment": comment} if comment else None,
+            )
+        else:
+            raise AttributeError("discard")
+
     def wait_run(
-        self, sleep_time=3, timeout=600, target_status="planned", progress_callback=None, target_callback=None
+        self,
+        sleep_time=3,
+        timeout=600,
+        target_status="planned",
+        progress_callback=None,
+        target_callback=None,
     ):
-        """target_status can be: planned, applied
-        """
         # TODO : Need to define a Enum for target_status
         if self.type == "runs":
             if not progress_callback or not callable(progress_callback):
@@ -282,11 +362,18 @@ class TFCObject(object):
 
                 if duration <= timeout:
                     if progress_callback:
-                        progress_callback(duration=duration, timeout=timeout, status=self.status, run=self)
+                        progress_callback(
+                            duration=duration,
+                            timeout=timeout,
+                            status=self.status,
+                            run=self,
+                        )
                     time.sleep(sleep_time)
                     self.refresh()
                 else:
                     break
+        else:
+            raise AttributeError("wait_run")
 
     def create_run(self, message=None, is_destroy=False):
         if self.type == "workspaces":
@@ -296,22 +383,77 @@ class TFCObject(object):
             if not message:
                 message = "Queued manually via the Terraform Enterprise API"
 
-            payload = {"is-destroy": is_destroy, "message": message}
-            workspace_data = {"data": {"type": "workspaces", "id": self.id}}
-
+            workspace_data = WorkspaceRootModel(
+                data=WorkspaceDataModel(type="workspaces", id=self.id)
+            )
             run = RunRootModel(
                 data=RunDataModel(
                     type="runs",
-                    attributes=RunModel(**payload),
-                    relationships=RelationshipsModel(
-                        workspace=WorkspaceRootModel(**workspace_data)
-                    ),
+                    attributes=RunModel(is_destroy=is_destroy, message=message),
+                    relationships=RelationshipsModel(workspace=workspace_data),
                 )
             )
-            data, meta, links = self.client._api.post(path=f"runs", data=run.json())
+            data, meta, links, included = self.client._api.post(
+                path=f"runs", data=run.json()
+            )
             run = TFCObject(self.client, data)
             self.attrs["runs"][run.id] = run
             return run
+        else:
+            raise AttributeError("create_run")
+
+    @property
+    def log_colored(self):
+        if self.type == "plans":
+            if "log" not in self.attrs:
+                self.attrs["log"] = self.client._api.get_raw(path=self.log_read_url)
+            return self.attrs["log"]
+        else:
+            raise AttributeError("log_colored")
+
+    @property
+    def log(self):
+        if self.type == "plans":
+            return re.sub(r"\x1b(\[.*?[@-~]|\].*?(\x07|\x1b\\))", "", self.log_colored)
+        else:
+            raise AttributeError("log")
+
+    @property
+    def log_resume(self):
+        if self.type == "plans":
+            return "\n".join(
+                [
+                    line
+                    for line in self.log.splitlines()
+                    if line.startswith("  + ")
+                    or line.startswith("  - ")
+                    or line.startswith("-/+ ")
+                    or line.startswith("  ~ ")
+                ]
+            )
+        else:
+            raise AttributeError("log_resume")
+
+    @property
+    def log_changes(self):
+        if self.type == "plans":
+            return_lines = False
+            filtered_log = ""
+            for line in self.log.splitlines():
+                if re.match("Terraform will perform the following actions", line):
+                    return_lines = True
+                if return_lines:
+                    filtered_log += line + "\n"
+            return filtered_log
+        else:
+            raise AttributeError("log_resume")
+
+    @property
+    def log_signature(self):
+        if self.type == "plans":
+            return hashlib.sha256(bytes(self.log_resume, encoding="utf-8")).hexdigest()
+        else:
+            raise AttributeError("log_signature")
 
     def __getattr__(self, key):
         key_dash = inflection.dasherize(key)
