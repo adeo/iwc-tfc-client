@@ -13,13 +13,14 @@ class APICaller(object):
         self._headers = headers
 
     def _call(self, method="get", path="/", *args, **kwargs):
+        message = ""
         requester = getattr(requests, method.lower())
         if path.startswith("/"):
             url = "/".join([self._host, path])
         else:
             url = "/".join([self._host, self._base_url, path])
 
-        response = requester(url=url, headers=self._headers, **kwargs)
+        response = requester(url=url, headers=self._headers, *args, **kwargs)
 
         if method in ["get", "post", "patch", "put"]:
             response_json = response.json()
@@ -31,14 +32,17 @@ class APICaller(object):
                         response_json.get("links"),
                     )
                 elif "errors" in response_json:
-                    message = "TFE API return errors:"
+                    message = f"TFE API return errors {response.status_code}:"
                     message += str(response_json)
+            if response.status_code < 400:
+                return True
         elif method in ["delete"] and response.status_code < 400:
             return True
 
         if not message and response.status_code >= 400:
             message = "Error status code: {}".format(response.status_code)
-        raise Exception("TFE API return errors:\n{}".format(message))
+            message += response.data
+        raise Exception()
 
     def get_paginated(self, page_size=20, page_number=1, *args, **kwargs):
         params = dict()
