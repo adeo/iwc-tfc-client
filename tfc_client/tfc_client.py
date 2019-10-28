@@ -35,7 +35,10 @@ class TFCClient(object):
             object_type = inflection.pluralize(inflection.dasherize(attr[4:]))
 
             def _get_object_type(*args, **kwargs):
-                return self.get(object_type, id=kwargs['id'] if "id" in kwargs else args[0])
+                return self.get(
+                    object_type, id=kwargs["id"] if "id" in kwargs else args[0]
+                )
+
             return _get_object_type
         else:
             raise AttributeError(attr)
