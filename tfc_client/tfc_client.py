@@ -86,7 +86,6 @@ class TFCObject(object):
             self._init_from_data(data)
 
     def refresh(self):
-        print(f"> Refresh {self.id}")
         self.attrs = dict()
         self.attrs["workspaces"] = dict()
         self.attrs["runs"] = dict()
