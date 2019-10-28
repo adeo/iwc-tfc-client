@@ -1,17 +1,14 @@
+import inflection
 from pydantic import BaseModel
-
-
-def underscore_to_dash(string):
-    return string.translate({ord("_"): ord("-")})
 
 
 class KebabCaseBaseModel(BaseModel):
     class Config:
-        alias_generator = underscore_to_dash
+        alias_generator = inflection.dasherize
 
     def __init__(self, *args, **kwargs):
         dashed_kwargs = {
-            underscore_to_dash(key): value for key, value in kwargs.items()
+            inflection.dasherize(key): value for key, value in kwargs.items()
         }
         super().__init__(*args, **dashed_kwargs)
 

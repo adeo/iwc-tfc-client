@@ -29,5 +29,5 @@ setuptools.setup(
         "test": ["pytest", "coverage", "pytest-cov"],
     },
     tests_require=["pytest", "pytest-cov"],
-    install_requires=["requests", "pydantic", "pydantic[email]"],
+    install_requires=["requests", "pydantic", "pydantic[email]", "inflection"],
 )

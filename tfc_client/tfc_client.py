@@ -1,6 +1,8 @@
 from collections.abc import Mapping, Iterable
 import time
 
+import inflection
+
 from .api_caller import APICaller
 from .models.relationship import RelationshipsModel
 from .models.workspace import WorkspaceRootModel, WorkspaceDataModel, WorkspaceModel
@@ -30,11 +32,8 @@ class TFCClient(object):
 
     def __getattr__(self, attr):
         if attr.startswith("get_"):
-            object_type = attr[4:].translate({ord("_"): ord("-")})
-            if object_type == "apply":
-                object_type == "applies"
-            else:
-                object_type += "s"
+            object_type = inflection.pluralize(inflection.dasherize(attr[4:]))
+
             def _get_object_type(*args, **kwargs):
                 return self.get(object_type, id=kwargs['id'] if "id" in kwargs else args[0])
             return _get_object_type
@@ -304,8 +303,11 @@ class TFCObject(object):
             return run
 
     def __getattr__(self, key):
-        key_dash = key.replace("_", "-")
-        if key_dash in self.attributes:
+        key_dash = inflection.dasherize(key)
+        key_classname = inflection.camelize(key)
+        if key.startswith("create_"):
+            pass
+        elif key_dash in self.attributes:
             return self.attributes[key_dash]
         elif self.relationships and key_dash in self.relationships:
             return self.relationships[key_dash]
