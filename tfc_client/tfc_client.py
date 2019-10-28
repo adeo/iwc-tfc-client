@@ -158,27 +158,25 @@ class TFCObject(object):
         self, key, value, category="terraform", sensitive=False, hcl=False
     ):
         if self.type == "workspaces":
-            # TODO : Need rework
-            payload = {
-                "key": key,
-                "value": value,
-                "sensitive": sensitive,
-                "hcl": hcl,
-                "category": category,
-            }
-            workspace_data = {"data": {"type": "workspaces", "id": self.id}}
-
-            run = VarRootModel(
+            payload = VarRootModel(
                 data=VarDataModel(
                     type="vars",
-                    attributes=VarModel(**payload),
+                    attributes=VarModel(
+                        key=key,
+                        value=value,
+                        sensitive=sensitive,
+                        hcl=hcl,
+                        category=category,
+                    ),
                     relationships=RelationshipsModel(
-                        workspace=WorkspaceRootModel(**workspace_data)
+                        workspace=WorkspaceRootModel(
+                            data=WorkspaceDataModel(type="workspaces", id=self.id)
+                        )
                     ),
                 )
             )
 
-            data, meta, links = self.client._api.post(path=f"vars", data=run.json())
+            data, meta, links = self.client._api.post(path=f"vars", data=payload.json())
             var = TFCObject(self.client, data)
             self.attrs["vars"][var.id] = var
             return var
