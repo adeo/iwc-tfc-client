@@ -102,8 +102,11 @@ my_run.wait_run(
     sleep_time=2,
     timeout=200,
     target_status="planned",
-    callback=lambda duration, timeout, status: print(
+    progress_callback=lambda duration, timeout, status, run: print(
         f"wait_run ... duration: {duration:.2f}/{timeout}s (status: {status})"
+    ),
+    target_callback=lambda duration, status, run: print(
+        f"run finish. Duration: {duration:.2f}s status: {status}"
     ),
 )
 
@@ -115,8 +118,11 @@ my_run.wait_run(
     sleep_time=2,
     timeout=200,
     target_status="applied",
-    callback=lambda duration, timeout, status: print(
+    progress_callback=lambda duration, timeout, status, run: print(
         f"wait_run ... duration: {duration:.2f}/{timeout}s (status: {status})"
+    ),
+    target_callback=lambda duration, status, run: print(
+        f"run finish. Duration: {duration:.2f}s status: {status}"
     ),
 )
 input("Press Enter to delete test workspacess...")

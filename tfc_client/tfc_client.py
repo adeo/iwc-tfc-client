@@ -261,21 +261,28 @@ class TFCObject(object):
             raise AttributeError("apply")
 
     def wait_run(
-        self, sleep_time=3, timeout=600, target_status="planned", callback=None
+        self, sleep_time=3, timeout=600, target_status="planned", progress_callback=None, target_callback=None
     ):
         """target_status can be: planned, applied
         """
         # TODO : Need to define a Enum for target_status
         if self.type == "runs":
+            if not progress_callback or not callable(progress_callback):
+                progress_callback = None
+            if not target_callback or not callable(target_callback):
+                target_callback = None
+
             start_time = time.time()
             while True:
                 duration = time.time() - start_time
                 if self.status == target_status:
+                    if target_callback:
+                        target_callback(duration=duration, status=self.status, run=self)
                     break
 
                 if duration <= timeout:
-                    if callback and callable(callback):
-                        callback(duration=duration, timeout=timeout, status=self.status)
+                    if progress_callback:
+                        progress_callback(duration=duration, timeout=timeout, status=self.status, run=self)
                     time.sleep(sleep_time)
                     self.refresh()
                 else:
