@@ -283,7 +283,8 @@ class TFCObject(object):
 
     def create_run(self, message=None, is_destroy=False):
         if self.type == "workspaces":
-            # If create_run is executed to quickly after ws creation: it fail :(
+            # If create_run is executed too quickly after ws creation: it fail :(
+            # TODO: Remove this sleep
             time.sleep(2)
             if not message:
                 message = "Queued manually via the Terraform Enterprise API"
