@@ -262,23 +262,26 @@ class TFCObject(object):
         else:
             raise AttributeError("apply")
 
-    def wait_run(self, sleep_time=3, timeout=60):
+    def wait_run(
+        self, sleep_time=3, timeout=600, target_status="planned", callback=None
+    ):
+        """target_status can be: planned, applied
+        """
+        # TODO : Need to define a Enum for target_status
         if self.type == "runs":
             start_time = time.time()
-            # TODO : wait terraform to re-working correctly to continu debug on this method
             while True:
-                if self.status != "planning":
-                    print("new status:", self.status)
-                    # break
-                else:
-                    print("status:", self.status)
-
-                if (time.time() - start_time) > timeout:
+                duration = time.time() - start_time
+                if self.status == target_status:
                     break
-                else:
-                    print(f"timeout ({timeout}):", (time.time() - start_time))
+
+                if duration <= timeout:
+                    if callback and callable(callback):
+                        callback(duration=duration, timeout=timeout, status=self.status)
                     time.sleep(sleep_time)
                     self.refresh()
+                else:
+                    break
 
     def create_run(self, message=None, is_destroy=False):
         if self.type == "workspaces":
