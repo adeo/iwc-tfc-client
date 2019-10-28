@@ -245,17 +245,17 @@ class TFCObject(object):
 
     def delete_workspace(self, workspace_id):
         if self.type == "organizations":
-            response = self.client._api.delete(path=f"workspaces/{workspace_id}")
+            self.client._api.delete(path=f"workspaces/{workspace_id}")
             if workspace_id in self.attrs["workspaces"]:
                 del self.attrs["workspaces"][workspace_id]
-            return response
         else:
             raise AttributeError("delete_workspace")
 
     def apply(self, comment=None):
         if self.type == "runs":
-            data, meta, links = self.client._api.post(
-                path=f"/runs/{self.id}/actions/apply", data={"comment": comment}
+            self.client._api.post(
+                path=f"runs/{self.id}/actions/apply",
+                json={"comment": comment} if comment else None,
             )
         else:
             raise AttributeError("apply")
