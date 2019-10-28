@@ -23,15 +23,19 @@ from example_config import (
 
 # logging.basicConfig(level=logging.DEBUG)
 
+if user_token:
+    admin_client = TFCClient(user_token)
 
-admin_client = TFCClient(user_token)
+    org_name = "{}{:05d}".format(test_org_prefix, randint(1, 99999))
+    print(f"Creating organization '{org_name}'")
+    org_model = OrganizationModel(name=org_name, email=test_org_email)
+    admin_client.create_organization(org_model)
 
-org_name = "{}{:05d}".format(test_org_prefix, randint(1, 99999))
-print(f"Creating organization '{org_name}'")
-org_model = OrganizationModel(name=org_name, email=test_org_email)
-admin_client.create_organization(org_model)
+    input("Press Enter to continue...")
 
-input("Press Enter to continue...")
+    print(f"Delete organization '{org_name}'")
+
+    admin_client.destroy_organization(org_name)
 
 
 client = TFCClient(team_token)
@@ -39,7 +43,6 @@ client = TFCClient(team_token)
 print(f"OAuth-token: {github_oauth}")
 ot = client.get_oauth_token(github_oauth)
 print(ot.created_at)
-exit()
 
 tfc = client.get_organization(org_id)
 print(f"Now connected on organization '{tfc.name}' with Team Token")
@@ -89,29 +92,36 @@ print("ws_by_id:", ws_by_id.name)
 ws_by_name = tfc.workspace(workspace_name=new_ws.name)
 print("ws_by_name:", ws_by_name.name)
 
-# Create variable "bar"
+print("Add a variable 'bar' ..." )
 new_ws.create_variable(key="bar", value="test")
-
 
 print("Create a run...")
 my_run = new_ws.create_run(message="First Try !")
 
-my_run.wait_run(sleep_time=2, timeout=10)
+my_run.wait_run(
+    sleep_time=2,
+    timeout=200,
+    target_status="planned",
+    callback=lambda duration, timeout, status: print(
+        f"wait_run ... duration: {duration:.2f}/{timeout}s (status: {status})"
+    ),
+)
 
+input("Press Enter to apply...")
 
-# print(org.workspace(new_ws.id).name)
-input("Press Enter to continue...")
+my_run.apply(comment="Auto apply from TFC Client")
+
+my_run.wait_run(
+    sleep_time=2,
+    timeout=200,
+    target_status="applied",
+    callback=lambda duration, timeout, status: print(
+        f"wait_run ... duration: {duration:.2f}/{timeout}s (status: {status})"
+    ),
+)
+input("Press Enter to delete test workspacess...")
 
 for ws in tfc.workspaces:
     if re.match(test_ws_prefix + r"\d{5}", ws.name):
         print("delete", ws.id, ws.name)
         tfc.delete_workspace(ws.id)
-
-
-# lz-gcp-opus-prod-west3-dtep
-
-# print("Org name:", org.name)
-# print("perm", org.permissions.can_destroy)
-
-# for workspace in client.list_workspaces():
-#     print(workspace.id, workspace.name)
