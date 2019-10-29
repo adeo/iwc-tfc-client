@@ -303,13 +303,13 @@ class TFCObject(object):
         else:
             raise AttributeError("workspaces")
 
-    def workspace(self, workspace_name):
+    def workspace(self, name):
         if self.type == "organizations":
             workspace_id = None
             ws_ids = [
                 ws_id
                 for ws_id, ws in self.attrs["workspaces"].items()
-                if ws.name == workspace_name
+                if ws.name == name
             ]
             if ws_ids:
                 workspace_id = ws_ids[0]
@@ -320,7 +320,7 @@ class TFCObject(object):
                 ws = TFCObject(
                     self.client,
                     self.client._api.get(
-                        path=f"organizations/{self.name}/workspaces/{workspace_name}"
+                        path=f"organizations/{self.name}/workspaces/{name}"
                     ),
                 )
                 self.attrs["workspaces"][ws.id] = ws

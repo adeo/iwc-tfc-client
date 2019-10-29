@@ -50,7 +50,7 @@ print(f"Now connected on organization '{tfc.name}' with Team Token")
 
 print("List the 5 first workspaces")
 count = 0
-for ws in tfc.workspaces_with_include("current-run"):
+for ws in tfc.workspaces_search("current-run"):
     print("workspace name:", ws.name)
     print(" - latest-change-at:", ws.latest_change_at)
     print("   vcs_repo:", ws.vcs_repo)
@@ -86,10 +86,10 @@ workspace_to_create = WorkspaceModel(
 
 new_ws = tfc.create_workspace(workspace_to_create)
 
-ws_by_id = tfc.workspace(workspace_id=new_ws.id)
+ws_by_id = client.get_workspace(id=new_ws.id)
 print("ws_by_id:", ws_by_id.name)
 
-ws_by_name = tfc.workspace(workspace_name=new_ws.name)
+ws_by_name = tfc.workspace(name=new_ws.name)
 print("ws_by_name:", ws_by_name.name)
 
 print("Add a variable 'bar' ...")
