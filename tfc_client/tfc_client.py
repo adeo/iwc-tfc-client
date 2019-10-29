@@ -135,6 +135,27 @@ class TFCObject(object):
             raise AttributeError("status_counts")
 
     @property
+    def pagination(self):
+        if self.type == "organizations":
+            if "pagination" not in self.attrs:
+                data, meta, links, included = self.client._api.get(
+                    path=f"organizations/{self.name}/workspaces",
+                    params={"page[size]": 1},
+                )
+                if "pagination" in meta:
+                    self.attrs["pagination"] = meta["pagination"]
+            return self.attrs.get("pagination", {})
+        else:
+            raise AttributeError("pagination")
+
+    @pagination.setter
+    def pagination(self, pagination_dict):
+        if self.type == "organizations":
+            self.attrs["pagination"] = pagination_dict
+        else:
+            raise AttributeError("pagination")
+
+    @property
     def relationships(self):
         if "relationships" not in self.attrs:
             self._get_data("relationships")
@@ -229,6 +250,10 @@ class TFCObject(object):
             for data, meta, links, included in self.client._api.get_list(
                 path=f"organizations/{organization}/workspaces"
             ):
+                if "pagination" in meta:
+                    self.pagination = meta["pagination"]
+                if "status-counts" in meta:
+                    self.status_counts = meta["status-counts"]
                 for ws in data:
                     ws_id = ws["id"]
                     self.attrs["workspaces"][ws_id] = TFCObject(self.client, ws)
@@ -247,6 +272,11 @@ class TFCObject(object):
                 search=search,
                 filters=filters
             ):
+                if "pagination" in meta:
+                    self.pagination = meta["pagination"]
+                if "status-counts" in meta:
+                    self.status_counts = meta["status-counts"]
+
                 for ws in data:
                     ws_id = ws["id"]
 
