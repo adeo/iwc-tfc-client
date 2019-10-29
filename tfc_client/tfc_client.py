@@ -236,12 +236,16 @@ class TFCObject(object):
         else:
             raise AttributeError("workspaces")
 
-    def workspaces_with_include(self, include_relationship):
+    def workspaces_search(self, search=None, filters=None, include_relationship=None):
         if self.type == "organizations":
             organization = self.name
             for data, meta, links, included in self.client._api.get_list(
                 path=f"organizations/{organization}/workspaces",
-                include=inflection.underscore(include_relationship),
+                include=inflection.underscore(include_relationship)
+                if include_relationship
+                else None,
+                search=search,
+                filters=filters
             ):
                 for ws in data:
                     ws_id = ws["id"]

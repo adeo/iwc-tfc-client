@@ -59,6 +59,7 @@ class APICaller(object):
         params=None,
         page_number=1,
         page_size=20,
+        search=None,
         filters=None,
         include=None,
         *args,
@@ -67,12 +68,14 @@ class APICaller(object):
         if not params:
             params = dict()
         if filters:
-            params.extend(self._dict_to_params("filter", filters))
+            params.update(self._dict_to_params("filter", filters))
 
         if page_size:
             params["page[size]"] = page_size
         if page_number:
             params["page[number]"] = page_number
+        if search:
+            params["search[name]"] = search
         if include:
             params["include"] = include
 
