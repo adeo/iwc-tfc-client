@@ -34,7 +34,6 @@ class APICaller(object):
             response_json = response.json()
             if response_json:
                 if "data" in response_json:
-                    # TODO : Create a APIResponse object instead of returning a tuple
                     return APIResponse(response_json)
 
                 elif "errors" in response_json:
