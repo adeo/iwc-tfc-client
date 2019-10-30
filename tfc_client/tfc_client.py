@@ -15,7 +15,7 @@ from .models.organization import (
     OrganizationDataModel,
     OrganizationModel,
 )
-from .run_status import RunStatus
+from .enums import RunStatus
 
 
 class TFCClient(object):
@@ -456,17 +456,15 @@ class TFCObject(object):
 
             start_time = time.time()
             while True:
-                duration = time.time() - start_time
+                duration = int(time.time() - start_time)
                 if RunStatus(self.status) in target_status:
                     if target_callback:
-                        target_callback(duration=duration, status=self.status, run=self)
+                        target_callback(run=self, duration=duration)
                     break
 
                 if duration <= timeout:
                     if progress_callback:
-                        progress_callback(
-                            duration=duration, status=self.status, run=self
-                        )
+                        progress_callback(run=self, duration=duration)
                     time.sleep(sleep_time)
                     self.refresh()
                 else:

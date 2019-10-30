@@ -3,7 +3,8 @@ from random import randint
 import re
 import time
 
-from tfc_client import TFCClient, RunStatus
+from tfc_client import TFCClient
+from tfc_client.enums import RunStatus
 
 from tfc_client.models.vcs_repo import VCSRepoModel
 from tfc_client.models.workspace import WorkspaceModel
