@@ -11,7 +11,7 @@ kishi : "Earth snake" in Japanese.
 Currently the following endpoints are supported:
 
 - [ ] [Account](https://www.terraform.io/docs/enterprise/api/account.html)
-- [ ] [Applies](https://www.terraform.io/docs/cloud/api/applies.html)
+- [x] [Applies](https://www.terraform.io/docs/cloud/api/applies.html)
 - [ ] [Configuration Versions](https://www.terraform.io/docs/enterprise/api/configuration-versions.html)
 - [ ] [Cost Estimates](https://www.terraform.io/docs/cloud/api/cost-estimates.html)
 - [ ] [Notification Configurations](terraform.io/docs/cloud/api/notification-configurations.html)
@@ -20,12 +20,12 @@ Currently the following endpoints are supported:
 - [x] [Organizations](https://www.terraform.io/docs/enterprise/api/organizations.html)
   - [x] List
   - [x] Show
-  - [ ] Create
+  - [x] Create
   - [ ] Update
-  - [ ] Destroy
+  - [x] Destroy
 - [ ] [Organization Tokens](https://www.terraform.io/docs/enterprise/api/organization-tokens.html)
 - [ ] [Plan Exports](https://www.terraform.io/docs/cloud/api/plan-exports.html)
-- [ ] [Plans](https://www.terraform.io/docs/cloud/api/plans.html)
+- [x] [Plans](https://www.terraform.io/docs/cloud/api/plans.html)
 - [ ] [Policies](https://www.terraform.io/docs/enterprise/api/policies.html)
 - [ ] [Policy Checks](https://www.terraform.io/docs/enterprise/api/policy-checks.html)
 - [ ] [Policy Sets](https://www.terraform.io/docs/enterprise/api/policy-sets.html)
@@ -33,9 +33,9 @@ Currently the following endpoints are supported:
 - [x] [Runs](https://www.terraform.io/docs/enterprise/api/run.html)
   - [x] Create
   - [x] Apply
-  - [x] List
+  - [x] List runs in a workspace
   - [x] Get details
-  - [ ] Discars
+  - [x] Discard
   - [ ] Cancel
   - [ ] Force cancel
   - [ ] Force execute
@@ -47,7 +47,7 @@ Currently the following endpoints are supported:
 - [ ] [Team Tokens](https://www.terraform.io/docs/enterprise/api/team-tokens.html)
 - [ ] [Teams](https://www.terraform.io/docs/enterprise/api/teams.html)
 - [ ] [User Tokens](https://www.terraform.io/docs/cloud/api/user-tokens.html)
-- [ ] [Users](https://www.terraform.io/docs/cloud/api/users.html)
+- [x] [Users](https://www.terraform.io/docs/cloud/api/users.html)
 - [x] [Variables](https://www.terraform.io/docs/enterprise/api/variables.html)
   - [x] Create
   - [x] List

@@ -3,7 +3,7 @@ from random import randint
 import re
 import time
 
-from tfc_client import TFCClient
+from tfc_client import TFCClient, RunStatus
 
 from tfc_client.models.vcs_repo import VCSRepoModel
 from tfc_client.models.workspace import WorkspaceModel
@@ -50,19 +50,22 @@ print(f"Now connected on organization '{tfc.name}' with Team Token")
 
 print("List the 5 first workspaces")
 count = 0
-for ws in tfc.workspaces_search("current-run"):
+for ws in tfc.workspaces_search(include_relationship="current-run", search="toto"):
     print("workspace name:", ws.name)
     print(" - latest-change-at:", ws.latest_change_at)
     print("   vcs_repo:", ws.vcs_repo)
-    print(" - Retreive lastest run...")
+    print(" - Retreive current run...")
     try:
-        print("   - message =>", ws.latest_run.message)
-        print("   - status =>", ws.latest_run.status)
+        print("   - message =>", ws.current_run.message)
+        print("   - status =>", ws.current_run.status)
     except AttributeError:
         pass
     print(" - List variables")
-
     print("   -->", ", ".join(ws.variables.keys()))
+
+    # print(" - List runs")
+    # for run in ws.runs:
+    #     print("    •", run.status, run.created_at)
 
     print("=========================================")
     count += 1
@@ -98,36 +101,65 @@ new_ws.create_variable(key="bar", value="test")
 print("Create a run...")
 my_run = new_ws.create_run(message="First Try !")
 
+def goto_line(nb):
+    return f"\x1b[{nb}A"
+
+clear_after = "\x1b[K"
+
+def tail_plan_log(duration, status, run):
+    nb_lines = 10
+    print("============================8<===================================")
+    print("\n"*nb_lines, end="")
+    print(f"{goto_line(nb_lines)}", end="")
+    last_lines = run.plan.log_colored.splitlines()[-nb_lines:]
+    print(f"{clear_after}\n".join(last_lines))
+    if len(last_lines) < nb_lines:
+        print(f"{clear_after}\n"*(nb_lines-len(last_lines)), end="")
+    print("============================8<===================================")
+    print(f"{goto_line(nb_lines+2)}", end="")
+
+
+def tail_plan_log_finish(duration, status, run):
+    nb_lines = 10
+    print("\n"*(nb_lines+1), end="")
+
+def tail_apply_log(duration, status, run):
+    nb_lines = 10
+    print("============================8<===================================")
+    print("\n"*nb_lines, end="")
+    print(f"{goto_line(nb_lines)}", end="")
+    last_lines = run.apply.log_colored.splitlines()[-nb_lines:]
+    print(f"{clear_after}\n".join(last_lines))
+    if len(last_lines) < nb_lines:
+        print(f"{clear_after}\n"*(nb_lines-len(last_lines)), end="")
+    print("============================8<===================================")
+    print(f"{goto_line(nb_lines+2)}", end="")
+
+def tail_apply_log_finish(duration, status, run):
+    nb_lines = 10
+    print("\n"*(nb_lines+1), end="")
+
 my_run.wait_run(
-    sleep_time=2,
+    sleep_time=1,
     timeout=200,
-    target_status="planned",
-    progress_callback=lambda duration, timeout, status, run: print(
-        f"wait_run ... duration: {duration:.2f}/{timeout}s (status: {status})"
-    ),
-    target_callback=lambda duration, status, run: print(
-        f"run finish. Duration: {duration:.2f}s status: {status}"
-    ),
+    progress_callback=tail_plan_log,
+    target_callback=tail_plan_log_finish,
 )
 
-input("Press Enter to apply...")
+input(f"Press Enter to apply...{clear_after}")
 
-my_run.apply(comment="Auto apply from TFC Client")
+my_run.do_apply(comment="Auto apply from TFC Client")
 
 my_run.wait_run(
-    sleep_time=2,
+    sleep_time=1,
     timeout=200,
-    target_status="applied",
-    progress_callback=lambda duration, timeout, status, run: print(
-        f"wait_run ... duration: {duration:.2f}/{timeout}s (status: {status})"
-    ),
-    target_callback=lambda duration, status, run: print(
-        f"run finish. Duration: {duration:.2f}s status: {status}"
-    ),
+    target_status=[ RunStatus.planned_and_finished, RunStatus.errored, RunStatus.applied],
+    progress_callback=tail_apply_log,
+    target_callback=tail_apply_log_finish,
 )
-input("Press Enter to delete test workspacess...")
+input(f"Press Enter to delete test workspacess...{clear_after}")
 
-for ws in tfc.workspaces:
+for ws in tfc.workspaces_search(search=test_ws_prefix):
     if re.match(test_ws_prefix + r"\d{5}", ws.name):
         print("delete", ws.id, ws.name)
         tfc.delete_workspace(ws.id)

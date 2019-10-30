@@ -15,14 +15,25 @@ from .models.organization import (
     OrganizationDataModel,
     OrganizationModel,
 )
+from .run_status import RunStatus
 
 
 class TFCClient(object):
-    def __init__(self, token: str, url: str = "https://app.terraform.io"):
-        self._token = token
-        self._url = url
-        self._attrs = dict()
+    """The Terraform Cloud Client
+    Initialize the session with the API server
+    Factory for TFCObject of any valid types with a TFCClient.get_<object_type>(id=<object_id>)
+    Can create (and destroy) the root organization object (with a user/admin token. Don't work with a team token)
 
+    Examples:
+     - tfc_client.get_workspace(id="ws-12344321")
+
+    :param token: TFC API Token
+    :type token: str
+    :param url: TFC API URL. Default: "https://app.terraform.io"
+    :type url: str
+    """
+
+    def __init__(self, token: str, url: str = "https://app.terraform.io"):
         headers = {
             "Content-Type": "application/vnd.api+json",
             "Authorization": "Bearer {}".format(token),
@@ -30,11 +41,12 @@ class TFCClient(object):
         self._api = APICaller(host=url, base_url="api/v2", headers=headers)
 
     def get(self, object_type, id):
+        object_type = inflection.pluralize(inflection.dasherize(object_type))
         return TFCObject(self, {"type": object_type, "id": id})
 
     def __getattr__(self, attr):
         if attr.startswith("get_"):
-            object_type = inflection.pluralize(inflection.dasherize(attr[4:]))
+            object_type = attr[4:]
 
             def _get_object_type(*args, **kwargs):
                 return self.get(
@@ -61,7 +73,24 @@ class TFCClient(object):
 
 
 class TFCObject(object):
-    def __init__(self, client, data, include=None):
+    """Represent a TFC object (workspace, run, variable, plan, apply, organization, ...)
+    with all methods to interact with.
+
+    For example:
+    - `my_org.workspaces` to retreive all workspaces of an organization
+    - `my_workspace.runs` to retreive all runs of a workspace
+    - `my_workspace.current_run.do_apply()` to apply the current run of a workspace
+    :param client: The TFC Client instance
+    :type client: TFCClient
+    :param data: Data to initialize the object (content of the "data" object in a API response)
+    :type data: dict
+    :param include: sub-element to include in the object (like run referenced for a workspace). Valid value depends on the TFC API and the object initialized.
+    :type include: str
+    :param init_from_data: Fill attributes informations from the data dict. Use False here to init an object from an API patch response, because the returned object is not complete.
+    :type init_from_data: bool
+    """
+
+    def __init__(self, client, data, include=None, init_from_data=True):
         self.client = client
         self.attrs = dict()
         self.attrs["workspaces"] = dict()
@@ -69,7 +98,8 @@ class TFCObject(object):
         self.attrs["vars"] = dict()
         self.id = data["id"]
         self.type = data["type"]
-        self._init_from_data(data)
+        if init_from_data:
+            self._init_from_data(data)
 
         if include and isinstance(include, Iterable):
             for included_data in include:
@@ -136,7 +166,7 @@ class TFCObject(object):
 
     @property
     def pagination(self):
-        if self.type == "organizations":
+        if self.type in ["organizations", "workspaces"]:
             if "pagination" not in self.attrs:
                 data, meta, links, included = self.client._api.get(
                     path=f"organizations/{self.name}/workspaces",
@@ -150,7 +180,7 @@ class TFCObject(object):
 
     @pagination.setter
     def pagination(self, pagination_dict):
-        if self.type == "organizations":
+        if self.type in ["organizations", "workspaces"]:
             self.attrs["pagination"] = pagination_dict
         else:
             raise AttributeError("pagination")
@@ -188,15 +218,20 @@ class TFCObject(object):
     @property
     def variables(self):
         if self.type == "workspaces":
-            if "vars" not in self.attrs:
-                organization = self.relationships["organization"]
-                self.variables, meta, links, included = self.client._api.get_list(
+            if not self.attrs["vars"]:
+                for (
+                    variables_list_data,
+                    meta,
+                    links,
+                    included,
+                ) in self.client._api.get_list(
                     path="vars",
                     filters={
                         "workspace": {"name": self.name},
-                        "organization": {"name": organization.name},
+                        "organization": {"name": self.organization.name},
                     },
-                )
+                ):
+                    self.variables = variables_list_data
             return self.attrs["vars"]
         else:
             raise AttributeError("variables")
@@ -204,10 +239,8 @@ class TFCObject(object):
     @variables.setter
     def variables(self, variables_list):
         if self.type == "workspaces":
-            self.attrs["vars"] = dict()
-            organization = self.relationships["organization"]
-            for var in variables_list:
-                var_object = TFCObject(self.client, var)
+            for data in variables_list:
+                var_object = TFCObject(self.client, data)
                 self.attrs["vars"][var_object.key] = var_object
         else:
             raise AttributeError("variables")
@@ -244,6 +277,22 @@ class TFCObject(object):
             raise AttributeError("variables")
 
     @property
+    def runs(self):
+        if self.type == "workspaces":
+            for data, meta, links, included in self.client._api.get_list(
+                path=f"workspaces/{self.id}/runs"
+            ):
+                if "pagination" in meta:
+                    self.pagination = meta["pagination"]
+
+                for run in data:
+                    run_id = run["id"]
+                    self.attrs["runs"][run_id] = TFCObject(self.client, run)
+                    yield self.attrs["runs"][run_id]
+        else:
+            raise AttributeError("runs")
+
+    @property
     def workspaces(self):
         if self.type == "organizations":
             organization = self.name
@@ -261,7 +310,9 @@ class TFCObject(object):
         else:
             raise AttributeError("workspaces")
 
-    def workspaces_search(self, search=None, filters=None, include_relationship=None):
+    def workspaces_search(
+        self, *, search=None, filters=None, include_relationship=None
+    ):
         if self.type == "organizations":
             organization = self.name
             for data, meta, links, included in self.client._api.get_list(
@@ -270,7 +321,7 @@ class TFCObject(object):
                 if include_relationship
                 else None,
                 search=search,
-                filters=filters
+                filters=filters,
             ):
                 if "pagination" in meta:
                     self.pagination = meta["pagination"]
@@ -353,7 +404,7 @@ class TFCObject(object):
         else:
             raise AttributeError("delete_workspace")
 
-    def apply(self, comment=None):
+    def do_apply(self, comment=None):
         if self.type == "runs":
             self.client._api.post(
                 path=f"runs/{self.id}/actions/apply",
@@ -362,7 +413,7 @@ class TFCObject(object):
         else:
             raise AttributeError("apply")
 
-    def discard(self, comment=None):
+    def do_discard(self, comment=None):
         if self.type == "runs":
             self.client._api.post(
                 path=f"runs/{self.id}/actions/discard",
@@ -375,12 +426,19 @@ class TFCObject(object):
         self,
         sleep_time=3,
         timeout=600,
-        target_status="planned",
+        target_status=None,
         progress_callback=None,
         target_callback=None,
     ):
         # TODO : Need to define a Enum for target_status
         if self.type == "runs":
+            if not target_status:
+                target_status = [
+                    RunStatus.planned,
+                    RunStatus.planned_and_finished,
+                    RunStatus.errored,
+                    RunStatus.applied,
+                ]
             if not progress_callback or not callable(progress_callback):
                 progress_callback = None
             if not target_callback or not callable(target_callback):
@@ -389,7 +447,7 @@ class TFCObject(object):
             start_time = time.time()
             while True:
                 duration = time.time() - start_time
-                if self.status == target_status:
+                if RunStatus(self.status) in target_status:
                     if target_callback:
                         target_callback(duration=duration, status=self.status, run=self)
                     break
@@ -397,10 +455,7 @@ class TFCObject(object):
                 if duration <= timeout:
                     if progress_callback:
                         progress_callback(
-                            duration=duration,
-                            timeout=timeout,
-                            status=self.status,
-                            run=self,
+                            duration=duration, status=self.status, run=self
                         )
                     time.sleep(sleep_time)
                     self.refresh()
@@ -438,7 +493,7 @@ class TFCObject(object):
 
     @property
     def log_colored(self):
-        if self.type == "plans":
+        if self.type in ["plans", "applies"]:
             if "log" not in self.attrs:
                 self.attrs["log"] = self.client._api.get_raw(path=self.log_read_url)
             return self.attrs["log"]
@@ -447,7 +502,7 @@ class TFCObject(object):
 
     @property
     def log(self):
-        if self.type == "plans":
+        if self.type in ["plans", "applies"]:
             return re.sub(r"\x1b(\[.*?[@-~]|\].*?(\x07|\x1b\\))", "", self.log_colored)
         else:
             raise AttributeError("log")
