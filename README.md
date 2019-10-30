@@ -36,9 +36,9 @@ Currently the following endpoints are supported:
   - [x] List runs in a workspace
   - [x] Get details
   - [x] Discard
-  - [ ] Cancel
-  - [ ] Force cancel
-  - [ ] Force execute
+  - [x] Cancel
+  - [x] Force cancel
+  - [x] Force execute
 - [ ] [SSH Keys](https://www.terraform.io/docs/enterprise/api/ssh-keys.html)
 - [ ] [State Versions](https://www.terraform.io/docs/enterprise/api/state-versions.html)
 - [ ] [State Version Outputs](https://www.terraform.io/docs/cloud/api/user-tokens.html)
