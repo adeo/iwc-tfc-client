@@ -306,14 +306,14 @@ class TFCObject(object):
             raise AttributeError("workspaces")
 
     def workspaces_search(
-        self, *, search=None, filters=None, include_relationship=None
+        self, *, search=None, filters=None, include=None
     ):
         if self.type == "organizations":
             organization = self.name
             for api_response in self.client._api.get_list(
                 path=f"organizations/{organization}/workspaces",
-                include=inflection.underscore(include_relationship)
-                if include_relationship
+                include=inflection.underscore(include)
+                if include
                 else None,
                 search=search,
                 filters=filters,
@@ -328,13 +328,13 @@ class TFCObject(object):
 
                     try:
                         included_relationship_id = ws["relationships"][
-                            include_relationship
+                            include
                         ]["data"]["id"]
 
                         included_relationship_data = [
-                            include
-                            for include in api_response.included
-                            if include["id"] == included_relationship_id
+                            included
+                            for included in api_response.included
+                            if included["id"] == included_relationship_id
                         ]
                     except (KeyError, TypeError):
                         included_relationship_data = None

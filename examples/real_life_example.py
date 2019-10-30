@@ -50,7 +50,7 @@ print(f"Now connected on organization '{tfc.name}' with Team Token")
 
 print("List the 5 first workspaces")
 count = 0
-for ws in tfc.workspaces_search(include_relationship="current-run"):
+for ws in tfc.workspaces_search(include="current-run"):
     print("workspace name:", ws.name)
     print(" - latest-change-at:", ws.latest_change_at)
     print("   vcs_repo:", ws.vcs_repo)
