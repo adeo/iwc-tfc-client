@@ -1,12 +1,93 @@
 # Terraform Cloud API Python Client
 
-Try to offer a good python object interface to Terraform Cloud API
+Try to offer a good python object interface to Terraform Cloud API.
 
 ## Name proposal
 
 kishi : "Earth snake" in Japanese.
 
-## Contributing to `terrasnek`
+## Quick start
+
+You can get all TFC objects by id with :
+
+```python
+from tfc_client import TFCClient
+from tfc_client.enums import RunStatus
+from tfc_client.models import VCSRepoModel, WorkspaceModel
+
+# Instanciate the client
+client = TFCClient(token="WXDFR3ZSDFGYTdftredfgtre")
+
+# Retreive any object type by ID from the client
+my_org = client.get("organization", id="myorg")
+my_ws = client.get("workspace", id="ws-gvcdr54dfd")
+my_run = client.get("run", id="run-wvfgkdlz")
+my_var = client.get("var", id="var-vcerjvjk")
+
+# If you need to retreive a workspace by name, you need to retreive it from an organization object:
+my_ws = my_org.workspace(name="my_workspace")
+
+# To retreive all workspaces:
+for ws in my_org.workspaces:
+    print(ws.name)
+
+# To retreive a subset of workspaces:
+for ws in my_org.workspaces_search(search="my_"):
+    print(ws.name)
+
+# If you need to retreive all workspaces with associated current-run info efficiently (in one api call):
+for ws in my_org.workspaces_search(include="current-run"):
+    print(f"{ws.name} -> {ws.current_run.status}")
+
+# To create a workspace linked with a github repository
+# First: Create the repository object:
+vcs_repo = VCSRepoModel(
+    identifier="github/repo",
+    oauth_token_id="ot-fgtredfgtr",
+    branch="master",
+    default_branch=True,
+)
+# Secondly: Create a workspace object that include the previous object:
+workspace_to_create = WorkspaceModel(
+    name="my_workspace_test", terraform_version="0.11.10", working_directory="", vcs_repo=vcs_repo
+)
+# Finally: Send the workspace object to TFC API:
+my_ws = my_org.create_workspace(workspace_to_create)
+
+
+# Launch a run on a workspace:
+my_run = my_ws.create_run(message="Run run run")
+
+# Wait for the run plan execution
+if my_run.wait_plan(timeout=200, progress_callback=lambda run, duration: print(f"{run.id} status is {run.status}")):
+    print(f"{my_run.id} reached the target status ({my_run.status})")
+    # Display log of the plan (with ANSI color)
+    print(my_run.plan.log_colored)
+
+else:
+    print(f"{my_run.id} is pending. Don't wait...")
+
+if RunStatus(my_run.status) == RunStatus.planned:
+    # Launch the Apply
+    my_run.do_apply(comment="Apply !")
+    # Wait for the run apply execution
+    if my_run.wait_apply(timeout=200, progress_callback=lambda run, duration: print(f"{run.id} status is {run.status}")):
+        print(f"{my_run.id} reached the target status ({my_run.status})")
+        # Display log of the apply (with ANSI color)
+        print(my_run.apply.log_colored)
+    else:
+        print(f"{my_run.id} is pending. Don't wait...")
+
+# To retreive all runs of a workspace:
+for run in my_ws.runs:
+    print(f"{run.id}: {run.status}")
+
+# Delete the workspace
+my_org.delete_workspace(my_ws.id)
+```
+
+
+## Current coverage of the TFC API
 
 Currently the following endpoints are supported:
 
@@ -70,5 +151,3 @@ Currently the following endpoints are supported:
 - [ ] [Admin Terraform Versions](https://www.terraform.io/docs/cloud/api/admin/terraform-versions.html)
 - [ ] [Admin Users](https://www.terraform.io/docs/cloud/api/admin/users.html)
 - [ ] [Admin Workspaces](https://www.terraform.io/docs/cloud/api/admin/workspaces.html)
-
-2/33
