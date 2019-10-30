@@ -6,6 +6,14 @@ from typing import cast
 import requests
 
 
+class APIResponse(object):
+    def __init__(self, response):
+        self.data = response["data"]
+        self.meta = response.get("meta")
+        self.links = response.get("links")
+        self.included = response.get("included")
+
+
 class APICaller(object):
     def __init__(self, host, base_url, headers=None):
         self._host = host
@@ -27,12 +35,8 @@ class APICaller(object):
             if response_json:
                 if "data" in response_json:
                     # TODO : Create a APIResponse object instead of returning a tuple
-                    return (
-                        response_json["data"],
-                        response_json.get("meta"),
-                        response_json.get("links"),
-                        response_json.get("included"),
-                    )
+                    return APIResponse(response_json)
+
                 elif "errors" in response_json:
                     message = f"TFE API return errors {response.status_code}:"
                     message += str(response_json)
@@ -79,16 +83,16 @@ class APICaller(object):
         if include:
             params["include"] = include
 
-        data, meta, links, included = self._call(method="get", params=params, **kwargs)
+        api_response = self._call(method="get", params=params, **kwargs)
 
-        if isinstance(data, Iterable):
+        if isinstance(api_response.data, Iterable):
             while True:
-                yield data, meta, links, included
+                yield api_response
 
-                if meta and "pagination" in meta:
-                    params["page[number]"] = meta["pagination"].get("next-page")
+                if api_response.meta and "pagination" in api_response.meta:
+                    params["page[number]"] = api_response.meta["pagination"].get("next-page")
                     if params["page[number]"]:
-                        data, meta, links, included = self._call(
+                        api_response = self._call(
                             method="get", params=params, **kwargs
                         )
                         continue

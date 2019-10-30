@@ -63,10 +63,10 @@ class TFCClient(object):
                 type="organizations", attributes=organization_model
             )
         )
-        data, meta, links, included = self._api.post(
+        api_response = self._api.post(
             path=f"organizations", data=payload.json()
         )
-        return TFCObject(self, data)
+        return TFCObject(self, api_response.data)
 
     def destroy_organization(self, organization_name):
         self._api.delete(path=f"organizations/{organization_name}")
@@ -124,8 +124,8 @@ class TFCObject(object):
             else:
                 data_url = f"{self.type}/{self.id}"
 
-            data, meta, links, included = self.client._api.get(path=data_url)
-            self._init_from_data(data)
+            api_response = self.client._api.get(path=data_url)
+            self._init_from_data(api_response.data)
 
     def refresh(self):
         self.attrs = dict()
@@ -147,12 +147,12 @@ class TFCObject(object):
     def status_counts(self):
         if self.type == "organizations":
             if "status-counts" not in self.attrs:
-                data, meta, links, included = self.client._api.get(
+                api_response = self.client._api.get(
                     path=f"organizations/{self.name}/workspaces",
                     params={"page[size]": 1},
                 )
-                if "status-counts" in meta:
-                    self.attrs["status-counts"] = meta["status-counts"]
+                if "status-counts" in api_response.meta:
+                    self.attrs["status-counts"] = api_response.meta["status-counts"]
             return self.attrs.get("status-counts", {})
         else:
             raise AttributeError("status_counts")
@@ -168,12 +168,12 @@ class TFCObject(object):
     def pagination(self):
         if self.type in ["organizations", "workspaces"]:
             if "pagination" not in self.attrs:
-                data, meta, links, included = self.client._api.get(
+                api_response = self.client._api.get(
                     path=f"organizations/{self.name}/workspaces",
                     params={"page[size]": 1},
                 )
-                if "pagination" in meta:
-                    self.attrs["pagination"] = meta["pagination"]
+                if "pagination" in api_response.meta:
+                    self.attrs["pagination"] = api_response.meta["pagination"]
             return self.attrs.get("pagination", {})
         else:
             raise AttributeError("pagination")
@@ -219,19 +219,14 @@ class TFCObject(object):
     def variables(self):
         if self.type == "workspaces":
             if not self.attrs["vars"]:
-                for (
-                    variables_list_data,
-                    meta,
-                    links,
-                    included,
-                ) in self.client._api.get_list(
+                for api_response in self.client._api.get_list(
                     path="vars",
                     filters={
                         "workspace": {"name": self.name},
                         "organization": {"name": self.organization.name},
                     },
                 ):
-                    self.variables = variables_list_data
+                    self.variables = api_response.data
             return self.attrs["vars"]
         else:
             raise AttributeError("variables")
@@ -267,10 +262,10 @@ class TFCObject(object):
                 )
             )
 
-            data, meta, links, included = self.client._api.post(
+            api_response = self.client._api.post(
                 path=f"vars", data=payload.json()
             )
-            var = TFCObject(self.client, data)
+            var = TFCObject(self.client, api_response.data)
             self.attrs["vars"][var.id] = var
             return var
         else:
@@ -279,13 +274,13 @@ class TFCObject(object):
     @property
     def runs(self):
         if self.type == "workspaces":
-            for data, meta, links, included in self.client._api.get_list(
+            for api_response in self.client._api.get_list(
                 path=f"workspaces/{self.id}/runs"
             ):
-                if "pagination" in meta:
-                    self.pagination = meta["pagination"]
+                if "pagination" in api_response.meta:
+                    self.pagination = api_response.meta["pagination"]
 
-                for run in data:
+                for run in api_response.data:
                     run_id = run["id"]
                     self.attrs["runs"][run_id] = TFCObject(self.client, run)
                     yield self.attrs["runs"][run_id]
@@ -296,14 +291,14 @@ class TFCObject(object):
     def workspaces(self):
         if self.type == "organizations":
             organization = self.name
-            for data, meta, links, included in self.client._api.get_list(
+            for api_response in self.client._api.get_list(
                 path=f"organizations/{organization}/workspaces"
             ):
-                if "pagination" in meta:
-                    self.pagination = meta["pagination"]
-                if "status-counts" in meta:
-                    self.status_counts = meta["status-counts"]
-                for ws in data:
+                if "pagination" in api_response.meta:
+                    self.pagination = api_response.meta["pagination"]
+                if "status-counts" in api_response.meta:
+                    self.status_counts = api_response.meta["status-counts"]
+                for ws in api_response.data:
                     ws_id = ws["id"]
                     self.attrs["workspaces"][ws_id] = TFCObject(self.client, ws)
                     yield self.attrs["workspaces"][ws_id]
@@ -315,7 +310,7 @@ class TFCObject(object):
     ):
         if self.type == "organizations":
             organization = self.name
-            for data, meta, links, included in self.client._api.get_list(
+            for api_response in self.client._api.get_list(
                 path=f"organizations/{organization}/workspaces",
                 include=inflection.underscore(include_relationship)
                 if include_relationship
@@ -323,12 +318,12 @@ class TFCObject(object):
                 search=search,
                 filters=filters,
             ):
-                if "pagination" in meta:
-                    self.pagination = meta["pagination"]
-                if "status-counts" in meta:
-                    self.status_counts = meta["status-counts"]
+                if "pagination" in api_response.meta:
+                    self.pagination = api_response.meta["pagination"]
+                if "status-counts" in api_response.meta:
+                    self.status_counts = api_response.meta["status-counts"]
 
-                for ws in data:
+                for ws in api_response.data:
                     ws_id = ws["id"]
 
                     try:
@@ -338,7 +333,7 @@ class TFCObject(object):
 
                         included_relationship_data = [
                             include
-                            for include in included
+                            for include in api_response.included
                             if include["id"] == included_relationship_id
                         ]
                     except (KeyError, TypeError):
@@ -375,10 +370,8 @@ class TFCObject(object):
                     ),
                 )
                 self.attrs["workspaces"][ws.id] = ws
-            data, self.meta, links, included = self.attrs["workspaces"].get(
-                workspace_id
-            )
-            return data
+            api_response = self.attrs["workspaces"].get(workspace_id)
+            return api_response.data
         else:
             raise AttributeError("workspaces")
 
@@ -387,10 +380,10 @@ class TFCObject(object):
             payload = WorkspaceRootModel(
                 data=WorkspaceDataModel(type="workspaces", attributes=workspace_model)
             )
-            data, meta, links, included = self.client._api.post(
+            api_response = self.client._api.post(
                 path=f"organizations/{self.name}/workspaces", data=payload.json()
             )
-            ws = TFCObject(self.client, data)
+            ws = TFCObject(self.client, api_response.data)
             self.attrs["workspaces"][ws.id] = ws
             return ws
         else:
@@ -482,10 +475,10 @@ class TFCObject(object):
                     relationships=RelationshipsModel(workspace=workspace_data),
                 )
             )
-            data, meta, links, included = self.client._api.post(
+            api_response = self.client._api.post(
                 path=f"runs", data=run.json()
             )
-            run = TFCObject(self.client, data)
+            run = TFCObject(self.client, api_response.data)
             self.attrs["runs"][run.id] = run
             return run
         else:
