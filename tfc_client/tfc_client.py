@@ -63,9 +63,7 @@ class TFCClient(object):
                 type="organizations", attributes=organization_model
             )
         )
-        api_response = self._api.post(
-            path=f"organizations", data=payload.json()
-        )
+        api_response = self._api.post(path=f"organizations", data=payload.json())
         return TFCObject(self, api_response.data)
 
     def destroy_organization(self, organization_name):
@@ -262,9 +260,7 @@ class TFCObject(object):
                 )
             )
 
-            api_response = self.client._api.post(
-                path=f"vars", data=payload.json()
-            )
+            api_response = self.client._api.post(path=f"vars", data=payload.json())
             var = TFCObject(self.client, api_response.data)
             self.attrs["vars"][var.id] = var
             return var
@@ -305,16 +301,12 @@ class TFCObject(object):
         else:
             raise AttributeError("workspaces")
 
-    def workspaces_search(
-        self, *, search=None, filters=None, include=None
-    ):
+    def workspaces_search(self, *, search=None, filters=None, include=None):
         if self.type == "organizations":
             organization = self.name
             for api_response in self.client._api.get_list(
                 path=f"organizations/{organization}/workspaces",
-                include=inflection.underscore(include)
-                if include
-                else None,
+                include=inflection.underscore(include) if include else None,
                 search=search,
                 filters=filters,
             ):
@@ -327,9 +319,9 @@ class TFCObject(object):
                     ws_id = ws["id"]
 
                     try:
-                        included_relationship_id = ws["relationships"][
-                            include
-                        ]["data"]["id"]
+                        included_relationship_id = ws["relationships"][include]["data"][
+                            "id"
+                        ]
 
                         included_relationship_data = [
                             included
@@ -434,33 +426,19 @@ class TFCObject(object):
             raise AttributeError("do_cancel")
 
     def wait_run(
-        self,
-        sleep_time=3,
-        timeout=600,
-        target_status=None,
-        progress_callback=None,
-        target_callback=None,
+        self, target_status, sleep_time=3, timeout=600, progress_callback=None
     ):
         if self.type == "runs":
-            if not target_status:
-                target_status = [
-                    RunStatus.planned,
-                    RunStatus.planned_and_finished,
-                    RunStatus.errored,
-                    RunStatus.applied,
-                ]
             if not progress_callback or not callable(progress_callback):
                 progress_callback = None
-            if not target_callback or not callable(target_callback):
-                target_callback = None
 
             start_time = time.time()
             while True:
                 duration = int(time.time() - start_time)
                 if RunStatus(self.status) in target_status:
-                    if target_callback:
-                        target_callback(run=self, duration=duration)
-                    break
+                    return True
+                elif RunStatus(self.status) == RunStatus.pending:
+                    return False
 
                 if duration <= timeout:
                     if progress_callback:
@@ -471,6 +449,34 @@ class TFCObject(object):
                     break
         else:
             raise AttributeError("wait_run")
+
+    def wait_plan(self, sleep_time=3, timeout=600, progress_callback=None):
+        if self.type == "runs":
+            target_status = [
+                RunStatus.planned,
+                RunStatus.planned_and_finished,
+                RunStatus.errored,
+            ]
+            return self.wait_run(
+                sleep_time=sleep_time,
+                timeout=timeout,
+                target_status=target_status,
+                progress_callback=progress_callback,
+            )
+        else:
+            raise AttributeError("wait_plan")
+
+    def wait_apply(self, sleep_time=3, timeout=600, progress_callback=None):
+        if self.type == "runs":
+            target_status = [RunStatus.errored, RunStatus.applied]
+            return self.wait_run(
+                sleep_time=sleep_time,
+                timeout=timeout,
+                target_status=target_status,
+                progress_callback=progress_callback,
+            )
+        else:
+            raise AttributeError("wait_apply")
 
     def create_run(self, message=None, is_destroy=False):
         if self.type == "workspaces":
@@ -489,9 +495,7 @@ class TFCObject(object):
                     relationships=RelationshipsModel(workspace=workspace_data),
                 )
             )
-            api_response = self.client._api.post(
-                path=f"runs", data=run.json()
-            )
+            api_response = self.client._api.post(path=f"runs", data=run.json())
             run = TFCObject(self.client, api_response.data)
             self.attrs["runs"][run.id] = run
             return run

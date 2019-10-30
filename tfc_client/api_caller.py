@@ -47,7 +47,6 @@ class APICaller(object):
         response = requester(url=url, headers=self._headers, *args, **kwargs)
 
         if method in ["get", "post", "patch", "put"]:
-            print(response.__dict__)
             response_json = response.json()
             if response_json:
                 if "data" in response_json:
