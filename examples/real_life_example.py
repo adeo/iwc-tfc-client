@@ -102,43 +102,49 @@ new_ws.create_variable(key="bar", value="test")
 print("Create a run...")
 my_run = new_ws.create_run(message="First Try !")
 
+
 def goto_line(nb):
     return f"\x1b[{nb}A"
 
+
 clear_after = "\x1b[K"
+
 
 def tail_plan_log(duration, status, run):
     nb_lines = 10
     print("============================8<===================================")
-    print("\n"*nb_lines, end="")
+    print("\n" * nb_lines, end="")
     print(f"{goto_line(nb_lines)}", end="")
     last_lines = run.plan.log_colored.splitlines()[-nb_lines:]
     print(f"{clear_after}\n".join(last_lines))
     if len(last_lines) < nb_lines:
-        print(f"{clear_after}\n"*(nb_lines-len(last_lines)), end="")
+        print(f"{clear_after}\n" * (nb_lines - len(last_lines)), end="")
     print("============================8<===================================")
     print(f"{goto_line(nb_lines+2)}", end="")
 
 
 def tail_plan_log_finish(duration, status, run):
     nb_lines = 10
-    print("\n"*(nb_lines+1), end="")
+    print("\n" * (nb_lines + 1), end="")
+
 
 def tail_apply_log(duration, status, run):
     nb_lines = 10
     print("============================8<===================================")
-    print("\n"*nb_lines, end="")
+    print("\n" * nb_lines, end="")
     print(f"{goto_line(nb_lines)}", end="")
     last_lines = run.apply.log_colored.splitlines()[-nb_lines:]
     print(f"{clear_after}\n".join(last_lines))
     if len(last_lines) < nb_lines:
-        print(f"{clear_after}\n"*(nb_lines-len(last_lines)), end="")
+        print(f"{clear_after}\n" * (nb_lines - len(last_lines)), end="")
     print("============================8<===================================")
     print(f"{goto_line(nb_lines+2)}", end="")
 
+
 def tail_apply_log_finish(duration, status, run):
     nb_lines = 10
-    print("\n"*(nb_lines+1), end="")
+    print("\n" * (nb_lines + 1), end="")
+
 
 my_run.wait_run(
     sleep_time=1,
@@ -154,7 +160,11 @@ my_run.do_apply(comment="Auto apply from TFC Client")
 my_run.wait_run(
     sleep_time=1,
     timeout=200,
-    target_status=[ RunStatus.planned_and_finished, RunStatus.errored, RunStatus.applied],
+    target_status=[
+        RunStatus.planned_and_finished,
+        RunStatus.errored,
+        RunStatus.applied,
+    ],
     progress_callback=tail_apply_log,
     target_callback=tail_apply_log_finish,
 )
