@@ -21,3 +21,10 @@ class KebabCaseBaseModel(BaseModel):
         return super().dict(
             *args, by_alias=by_alias, exclude_unset=exclude_unset, **kwargs
         )
+
+
+from .workspace import WorkspaceModel
+from .organization import OrganizationModel
+from .vcs_repo import VCSRepoModel
+from .var import VarModel
+from .run import RunModel
