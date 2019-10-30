@@ -404,7 +404,7 @@ class TFCObject(object):
                 json={"comment": comment} if comment else None,
             )
         else:
-            raise AttributeError("apply")
+            raise AttributeError("do_apply")
 
     def do_discard(self, comment=None):
         if self.type == "runs":
@@ -413,7 +413,25 @@ class TFCObject(object):
                 json={"comment": comment} if comment else None,
             )
         else:
-            raise AttributeError("discard")
+            raise AttributeError("do_discard")
+
+    def do_cancel(self, comment=None, force=False):
+        if self.type == "runs":
+            payload_json = {"comment": comment} if comment else None
+            if force:
+                api_path = f"runs/{self.id}/actions/force-cancel"
+            else:
+                api_path = f"runs/{self.id}/actions/cancel"
+
+            self.client._api.post(path=api_path, json=payload_json)
+        else:
+            raise AttributeError("do_cancel")
+
+    def do_force_execute(self):
+        if self.type == "runs":
+            self.client._api.post(path=f"runs/{self.id}/actions/force-execute")
+        else:
+            raise AttributeError("do_cancel")
 
     def wait_run(
         self,
@@ -423,7 +441,6 @@ class TFCObject(object):
         progress_callback=None,
         target_callback=None,
     ):
-        # TODO : Need to define a Enum for target_status
         if self.type == "runs":
             if not target_status:
                 target_status = [
@@ -459,8 +476,7 @@ class TFCObject(object):
 
     def create_run(self, message=None, is_destroy=False):
         if self.type == "workspaces":
-            # If create_run is executed too quickly after ws creation: it fail :(
-            # TODO: Remove this sleep
+            # TODO: Remove this sleep (If create_run is executed too quickly after ws creation: it fail :()
             time.sleep(2)
             if not message:
                 message = "Queued manually via the Terraform Enterprise API"
