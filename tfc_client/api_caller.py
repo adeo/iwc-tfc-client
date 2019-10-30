@@ -1,17 +1,33 @@
-from __future__ import annotations
-
 from collections.abc import Iterable, Mapping
-from typing import cast
 
 import requests
 
+from .exception import APIException
+
 
 class APIResponse(object):
-    def __init__(self, response):
-        self.data = response["data"]
+    def __init__(self, response: Mapping):
+        self.data = response.get("data")
         self.meta = response.get("meta")
         self.links = response.get("links")
         self.included = response.get("included")
+        self.errors = response.get("errors")
+
+    def __str__(self):
+        if self.data:
+            if isinstance(self.data, Iterable):
+                return f"Data array with {len(self.data)} elements"
+        elif self.errors:
+            rval = list()
+            for error in self.errors:
+                error_elements = list()
+                for key, value in error.items():
+                    if key == "source":
+                        error_elements.append(f". Please check: {value.get('pointer')}")
+                    else:
+                        error_elements.append(f"{key}: '{value}'")
+                rval.append(" ".join(error_elements))
+            return ", ".join(rval)
 
 
 class APICaller(object):
@@ -31,23 +47,21 @@ class APICaller(object):
         response = requester(url=url, headers=self._headers, *args, **kwargs)
 
         if method in ["get", "post", "patch", "put"]:
+            print(response.__dict__)
             response_json = response.json()
             if response_json:
                 if "data" in response_json:
                     return APIResponse(response_json)
 
                 elif "errors" in response_json:
-                    message = f"TFE API return errors {response.status_code}:"
-                    message += str(response_json)
+                    response_error = APIResponse(response_json)
+
             if response.status_code < 400:
                 return True
         elif method in ["delete"] and response.status_code < 400:
             return True
 
-        if not message and response.status_code >= 400:
-            message = "Error status code: {}".format(response.status_code)
-            message += response.data
-        raise Exception()
+        raise APIException(response_error)
 
     @staticmethod
     def _dict_to_params(object_name, object_content):
@@ -89,16 +103,16 @@ class APICaller(object):
                 yield api_response
 
                 if api_response.meta and "pagination" in api_response.meta:
-                    params["page[number]"] = api_response.meta["pagination"].get("next-page")
+                    params["page[number]"] = api_response.meta["pagination"].get(
+                        "next-page"
+                    )
                     if params["page[number]"]:
-                        api_response = self._call(
-                            method="get", params=params, **kwargs
-                        )
+                        api_response = self._call(method="get", params=params, **kwargs)
                         continue
 
                 break
         else:
-            raise Exception("data is not a list")
+            raise TypeError("data is not a list")
 
     def get_raw(self, path, *args, **kwargs):
         response = requests.get(path)
