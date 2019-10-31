@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import Optional
 from pydantic import EmailStr
 
@@ -22,10 +20,10 @@ class OrganizationPermissionsModel(KebabCaseBaseModel):
 
 
 class OrganizationModel(KebabCaseBaseModel):
-    name: str
+    name: Optional[str]
     external_id: Optional[str]
     created_at: Optional[str]
-    email: EmailStr
+    email: Optional[EmailStr]
     session_timeout: Optional[int] = 20160
     session_remember: Optional[int] = 20160
     collaborator_auth_policy: Optional[

@@ -47,12 +47,9 @@ vcs_repo = VCSRepoModel(
     branch="master",
     default_branch=True,
 )
-# Secondly: Create a workspace object that include the previous object:
-workspace_to_create = WorkspaceModel(
-    name="my_workspace_test", terraform_version="0.11.10", working_directory="", vcs_repo=vcs_repo
-)
+
 # Finally: Send the workspace object to TFC API:
-my_ws = my_org.create_workspace(workspace_to_create)
+my_ws = my_org.create_workspace(name="my_workspace_test", terraform_version="0.11.10", working_directory="", vcs_repo=vcs_repo)
 
 
 # Launch a run on a workspace:
@@ -102,7 +99,7 @@ Currently the following endpoints are supported:
   - [x] List
   - [x] Show
   - [x] Create
-  - [ ] Update
+  - [x] Update
   - [x] Destroy
 - [ ] [Organization Tokens](https://www.terraform.io/docs/enterprise/api/organization-tokens.html)
 - [ ] [Plan Exports](https://www.terraform.io/docs/cloud/api/plan-exports.html)
@@ -120,7 +117,12 @@ Currently the following endpoints are supported:
   - [x] Cancel
   - [x] Force cancel
   - [x] Force execute
-- [ ] [SSH Keys](https://www.terraform.io/docs/enterprise/api/ssh-keys.html)
+- [x] [SSH Keys](https://www.terraform.io/docs/enterprise/api/ssh-keys.html)
+  - [x] Create
+  - [x] Get
+  - [x] List
+  - [x] Update
+  - [x] Delete
 - [ ] [State Versions](https://www.terraform.io/docs/enterprise/api/state-versions.html)
 - [ ] [State Version Outputs](https://www.terraform.io/docs/cloud/api/user-tokens.html)
 - [ ] [Team Access](https://www.terraform.io/docs/enterprise/api/team-access.html)
@@ -132,17 +134,17 @@ Currently the following endpoints are supported:
 - [x] [Variables](https://www.terraform.io/docs/enterprise/api/variables.html)
   - [x] Create
   - [x] List
-  - [ ] Update
-  - [ ] Delete
+  - [x] Update
+  - [x] Delete
 - [x] [Workspaces](https://www.terraform.io/docs/enterprise/api/workspaces.html)
   - [x] List
   - [x] Show
   - [x] Create
-  - [ ] Update
+  - [x] Update
   - [x] Delete
-  - [ ] Lock
-  - [ ] Unlock
-  - [ ] Force Unlock
+  - [x] Lock
+  - [x] Unlock
+  - [x] Force Unlock
   - [ ] Assigh SSH key
   - [ ] Unassign SSH key
 - [ ] [Admin Organizations](https://www.terraform.io/docs/cloud/api/admin/organizations.html)

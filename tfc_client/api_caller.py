@@ -7,11 +7,11 @@ from .exception import APIException
 
 class APIResponse(object):
     def __init__(self, response: Mapping):
-        self.data = response.get("data")
-        self.meta = response.get("meta")
-        self.links = response.get("links")
-        self.included = response.get("included")
-        self.errors = response.get("errors")
+        self.data = response.get("data", [])
+        self.meta = response.get("meta", [])
+        self.links = response.get("links", [])
+        self.included = response.get("included", [])
+        self.errors = response.get("errors", [])
 
     def __str__(self):
         if self.data:
@@ -59,7 +59,8 @@ class APICaller(object):
                 return True
         elif method in ["delete"] and response.status_code < 400:
             return True
-
+        elif response.status_code > 400:
+            raise APIException(f"APIError code: {response.status_code}")
         raise APIException(response_error)
 
     @staticmethod
@@ -78,6 +79,7 @@ class APICaller(object):
         search=None,
         filters=None,
         include=None,
+        sort=None,
         *args,
         **kwargs,
     ):
@@ -94,6 +96,8 @@ class APICaller(object):
             params["search[name]"] = search
         if include:
             params["include"] = include
+        if sort:
+            params["sort"] = sort
 
         api_response = self._call(method="get", params=params, **kwargs)
 

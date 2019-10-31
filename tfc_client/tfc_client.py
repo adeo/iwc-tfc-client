@@ -15,7 +15,8 @@ from .models.organization import (
     OrganizationDataModel,
     OrganizationModel,
 )
-from .enums import RunStatus
+from .models.ssh_key import SshKeyRootModel, SshKeyDataModel, SshKeyModel
+from .enums import RunStatus, WorkspaceSort, VarCat
 
 
 class TFCClient(object):
@@ -57,7 +58,8 @@ class TFCClient(object):
         else:
             raise AttributeError(attr)
 
-    def create_organization(self, organization_model):
+    def create_organization(self, **kwargs):
+        organization_model = OrganizationModel(**kwargs)
         payload = OrganizationRootModel(
             data=OrganizationDataModel(
                 type="organizations", attributes=organization_model
@@ -68,6 +70,12 @@ class TFCClient(object):
 
     def destroy_organization(self, organization_name):
         self._api.delete(path=f"organizations/{organization_name}")
+
+    @property
+    def organizations(self):
+        for api_response in self._api.get_list(path=f"organizations"):
+            for org_data in api_response.data:
+                yield TFCObject(self, org_data)
 
 
 class TFCObject(object):
@@ -94,6 +102,7 @@ class TFCObject(object):
         self.attrs["workspaces"] = dict()
         self.attrs["runs"] = dict()
         self.attrs["vars"] = dict()
+        self.attrs["ssh-keys"] = dict()
         self.id = data["id"]
         self.type = data["type"]
         if init_from_data:
@@ -130,6 +139,7 @@ class TFCObject(object):
         self.attrs["workspaces"] = dict()
         self.attrs["runs"] = dict()
         self.attrs["vars"] = dict()
+        self.attrs["ssh-keys"] = dict()
 
     @property
     def attributes(self):
@@ -221,7 +231,7 @@ class TFCObject(object):
                     path="vars",
                     filters={
                         "workspace": {"name": self.name},
-                        "organization": {"name": self.organization.name},
+                        "organization": {"name": self.organization.id},
                     },
                 ):
                     self.variables = api_response.data
@@ -239,7 +249,7 @@ class TFCObject(object):
             raise AttributeError("variables")
 
     def create_variable(
-        self, key, value, category="terraform", sensitive=False, hcl=False
+        self, key, value, category=VarCat.terraform, sensitive=False, hcl=False
     ):
         if self.type == "workspaces":
             payload = VarRootModel(
@@ -286,9 +296,8 @@ class TFCObject(object):
     @property
     def workspaces(self):
         if self.type == "organizations":
-            organization = self.name
             for api_response in self.client._api.get_list(
-                path=f"organizations/{organization}/workspaces"
+                path=f"organizations/{self.name}/workspaces"
             ):
                 if "pagination" in api_response.meta:
                     self.pagination = api_response.meta["pagination"]
@@ -301,14 +310,40 @@ class TFCObject(object):
         else:
             raise AttributeError("workspaces")
 
-    def workspaces_search(self, *, search=None, filters=None, include=None):
+    @property
+    def ssh_keys(self):
+        if self.type == "organizations":
+            for api_response in self.client._api.get_list(
+                path=f"organizations/{self.name}/ssh-keys"
+            ):
+                if "pagination" in api_response.meta:
+                    self.pagination = api_response.meta["pagination"]
+                if "status-counts" in api_response.meta:
+                    self.status_counts = api_response.meta["status-counts"]
+                for ssh_key in api_response.data:
+                    ssh_key_id = ssh_key["id"]
+                    self.attrs["ssh-keys"][ssh_key_id] = TFCObject(self.client, ssh_key)
+                    yield self.attrs["ssh-keys"][ssh_key_id]
+        else:
+            raise AttributeError("ssh_keys")
+
+
+    def workspaces_search(
+        self, *, search=None, filters=None, include=None, sort=None, limit=None
+    ):
         if self.type == "organizations":
             organization = self.name
+
+            if sort and not isinstance(sort, WorkspaceSort):
+                sort = WorkspaceSort(sort)
+
+            count = 0
             for api_response in self.client._api.get_list(
                 path=f"organizations/{organization}/workspaces",
                 include=inflection.underscore(include) if include else None,
                 search=search,
                 filters=filters,
+                sort=sort,
             ):
                 if "pagination" in api_response.meta:
                     self.pagination = api_response.meta["pagination"]
@@ -316,28 +351,29 @@ class TFCObject(object):
                     self.status_counts = api_response.meta["status-counts"]
 
                 for ws in api_response.data:
+                    if isinstance(limit, int) and count >= limit:
+                        return
                     ws_id = ws["id"]
 
                     try:
-                        included_relationship_id = ws["relationships"][include]["data"][
-                            "id"
-                        ]
+                        included_rel_id = ws["relationships"][include]["data"]["id"]
 
-                        included_relationship_data = [
+                        included_rel_data = [
                             included
                             for included in api_response.included
-                            if included["id"] == included_relationship_id
+                            if included["id"] == included_rel_id
                         ]
                     except (KeyError, TypeError):
-                        included_relationship_data = None
+                        included_rel_data = None
 
-                    if included_relationship_data:
+                    if included_rel_data:
                         self.attrs["workspaces"][ws_id] = TFCObject(
-                            self.client, ws, include=included_relationship_data
+                            self.client, ws, include=included_rel_data
                         )
                     else:
                         self.attrs["workspaces"][ws_id] = TFCObject(self.client, ws)
                     yield self.attrs["workspaces"][ws_id]
+                    count += 1
         else:
             raise AttributeError("workspaces")
 
@@ -367,8 +403,9 @@ class TFCObject(object):
         else:
             raise AttributeError("workspaces")
 
-    def create_workspace(self, workspace_model):
+    def create_workspace(self, **kwargs):
         if self.type == "organizations":
+            workspace_model = WorkspaceModel(**kwargs)
             payload = WorkspaceRootModel(
                 data=WorkspaceDataModel(type="workspaces", attributes=workspace_model)
             )
@@ -381,29 +418,104 @@ class TFCObject(object):
         else:
             raise AttributeError("workspaces")
 
-    def delete_workspace(self, workspace_id):
+    def create_ssh_key(self, **kwargs):
         if self.type == "organizations":
-            self.client._api.delete(path=f"workspaces/{workspace_id}")
-            if workspace_id in self.attrs["workspaces"]:
-                del self.attrs["workspaces"][workspace_id]
+            model = SshKeyModel(**kwargs)
+            payload = SshKeyRootModel(
+                data=SshKeyDataModel(type="ssh-keys", attributes=model)
+            )
+            api_response = self.client._api.post(
+                path=f"organizations/{self.name}/ssh-keys", data=payload.json()
+            )
+            ssh_key = TFCObject(self.client, api_response.data)
+            self.attrs["ssh-keys"][ssh_key.id] = ssh_key
+            return ssh_key
+        else:
+            raise AttributeError("workspaces")
+
+    def delete_ssh_key(self, tfc_object):
+        if self.type == "organizations":
+            id = str(tfc_object)
+            if id in self.attrs["ssh-keys"]:
+                del self.attrs["ssh-keys"][id]
+            return self.client._api.delete(path=f"ssh-keys/{id}")
         else:
             raise AttributeError("delete_workspace")
 
+
+    def modify(self, **kwargs):
+        if self.type in ["workspaces", "vars", "organizations", "ssh-key"]:
+            if self.type == "organizations":
+                model = OrganizationModel(**kwargs)
+                payload = OrganizationRootModel(
+                    data=OrganizationDataModel(type="organizations", attributes=model)
+                )
+                path = f"organizations/{self.name}"
+
+            if self.type == "workspaces":
+                model = WorkspaceModel(**kwargs)
+                payload = WorkspaceRootModel(
+                    data=WorkspaceDataModel(type="workspaces", attributes=model)
+                )
+                path = f"organizations/{self.organization.id}/workspaces/{self.name}"
+
+            elif self.type == "vars":
+                model = VarModel(**kwargs)
+                payload = VarRootModel(data=VarDataModel(type="vars", attributes=model))
+                path = f"vars/{self.id}"
+
+            elif self.type == "ssh-keys":
+                model = SshKeyModel(**kwargs)
+                payload = SshKeyRootModel(data=SshKeyDataModel(type="ssh-keys", attributes=model))
+                path = f"ssh-keys/{self.id}"
+
+            api_response = self.client._api.patch(path=path, data=payload.json())
+            self.refresh()
+            # Special case for organizations renaming ...
+            # For organization, id == name
+            if "id" in api_response.data and api_response.data["id"] != self.id:
+                self.id = api_response.data["id"]
+            return self
+        else:
+            raise AttributeError("workspaces")
+
+    def delete_workspace(self, tfc_object):
+        if self.type == "organizations":
+            id = str(tfc_object)
+            if id in self.attrs["workspaces"]:
+                del self.attrs["workspaces"][id]
+            return self.client._api.delete(path=f"workspaces/{id}")
+        else:
+            raise AttributeError("delete_workspace")
+
+    def delete_variable(self, tfc_object):
+        if self.type == "workspaces":
+            id = str(tfc_object)
+            if id in self.attrs["vars"]:
+                del self.attrs["vars"][id]
+            return self.client._api.delete(path=f"vars/{id}")
+        else:
+            raise AttributeError("delete_variable")
+
     def do_apply(self, comment=None):
         if self.type == "runs":
-            self.client._api.post(
+            if self.client._api.post(
                 path=f"runs/{self.id}/actions/apply",
                 json={"comment": comment} if comment else None,
-            )
+            ):
+                self.refresh()
+                return True
         else:
             raise AttributeError("do_apply")
 
     def do_discard(self, comment=None):
         if self.type == "runs":
-            self.client._api.post(
+            if self.client._api.post(
                 path=f"runs/{self.id}/actions/discard",
                 json={"comment": comment} if comment else None,
-            )
+            ):
+                self.refresh()
+                return True
         else:
             raise AttributeError("do_discard")
 
@@ -415,15 +527,40 @@ class TFCObject(object):
             else:
                 api_path = f"runs/{self.id}/actions/cancel"
 
-            self.client._api.post(path=api_path, json=payload_json)
+            if self.client._api.post(path=api_path, json=payload_json):
+                self.refresh()
+                return True
         else:
             raise AttributeError("do_cancel")
 
     def do_force_execute(self):
         if self.type == "runs":
-            self.client._api.post(path=f"runs/{self.id}/actions/force-execute")
+            if self.client._api.post(path=f"runs/{self.id}/actions/force-execute"):
+                self.refresh()
+                return True
         else:
             raise AttributeError("do_cancel")
+
+    def do_lock(self):
+        if self.type == "workspaces":
+            if self.client._api.post(path=f"workspaces/{self.id}/actions/lock"):
+                self.refresh()
+                return True
+        else:
+            raise AttributeError("do_lock")
+
+    def do_unlock(self, force=False):
+        if self.type == "workspaces":
+            if force:
+                api_path = f"workspaces/{self.id}/actions/unlock"
+            else:
+                api_path = f"workspaces/{self.id}/actions/force-unlock"
+
+            if self.client._api.post(path=api_path):
+                self.refresh()
+                return True
+        else:
+            raise AttributeError("do_lock")
 
     def wait_run(
         self, target_status, sleep_time=3, timeout=600, progress_callback=None
@@ -437,7 +574,6 @@ class TFCObject(object):
                 duration = int(time.time() - start_time)
                 if RunStatus(self.status) in target_status:
                     return True
-
 
                 if duration <= timeout:
                     if progress_callback:
@@ -553,6 +689,9 @@ class TFCObject(object):
             return hashlib.sha256(bytes(self.log_resume, encoding="utf-8")).hexdigest()
         else:
             raise AttributeError("log_signature")
+
+    def __str__(self):
+        return self.id
 
     def __getattr__(self, key):
         key_dash = inflection.dasherize(key)

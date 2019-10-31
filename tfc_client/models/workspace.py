@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import Optional, List
 from . import KebabCaseBaseModel
 
@@ -24,8 +22,8 @@ class WorkspaceActionsModel(KebabCaseBaseModel):
 
 
 class WorkspaceModel(KebabCaseBaseModel):
-    name: str
-    auto_apply: bool = False
+    name: Optional[str]
+    auto_apply: Optional[bool] = False
     environment: Optional[str]
     locked: Optional[bool]
     queue_all_runs: Optional[bool]
