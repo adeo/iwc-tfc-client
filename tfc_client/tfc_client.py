@@ -437,8 +437,7 @@ class TFCObject(object):
                 duration = int(time.time() - start_time)
                 if RunStatus(self.status) in target_status:
                     return True
-                elif RunStatus(self.status) == RunStatus.pending:
-                    return False
+
 
                 if duration <= timeout:
                     if progress_callback:
@@ -446,7 +445,7 @@ class TFCObject(object):
                     time.sleep(sleep_time)
                     self.refresh()
                 else:
-                    break
+                    return False
         else:
             raise AttributeError("wait_run")
 
