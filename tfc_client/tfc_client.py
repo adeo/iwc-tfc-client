@@ -3,7 +3,7 @@ import hashlib
 import re
 import time
 
-import inflection
+from .util import InflectionStr
 
 from .api_caller import APICaller
 from .models.relationship import RelationshipsModel
@@ -42,7 +42,7 @@ class TFCClient(object):
         self._api = APICaller(host=url, base_url="api/v2", headers=headers)
 
     def get(self, object_type, id):
-        object_type = inflection.pluralize(inflection.dasherize(object_type))
+        object_type = InflectionStr(object_type).dasherize.pluralize
         return TFCObject(self, {"type": object_type, "id": id})
 
     def __getattr__(self, attr):
@@ -140,6 +140,10 @@ class TFCObject(object):
         self.attrs["runs"] = dict()
         self.attrs["vars"] = dict()
         self.attrs["ssh-keys"] = dict()
+
+    def factory(self, data):
+
+        class_name = "TFC{type}".format(InflectionStr(data["type"]).singularize.camelize)
 
     @property
     def attributes(self):
@@ -340,7 +344,7 @@ class TFCObject(object):
             count = 0
             for api_response in self.client._api.get_list(
                 path=f"organizations/{organization}/workspaces",
-                include=inflection.underscore(include) if include else None,
+                include=InflectionStr(include).underscore if include else None,
                 search=search,
                 filters=filters,
                 sort=sort,
@@ -694,8 +698,7 @@ class TFCObject(object):
         return self.id
 
     def __getattr__(self, key):
-        key_dash = inflection.dasherize(key)
-        key_classname = inflection.camelize(key)
+        key_dash = InflectionStr(key).dasherize
         if key.startswith("create_"):
             pass
         elif key_dash in self.attributes:
@@ -704,3 +707,6 @@ class TFCObject(object):
             return self.relationships[key_dash]
         else:
             raise AttributeError(key)
+
+class TFCWorkspace(TFCObject):
+    type = "workspaces"
