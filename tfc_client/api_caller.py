@@ -20,13 +20,18 @@ class APIResponse(object):
         elif self.errors:
             rval = list()
             for error in self.errors:
-                error_elements = list()
-                for key, value in error.items():
-                    if key == "source":
-                        error_elements.append(f". Please check: {value.get('pointer')}")
-                    else:
-                        error_elements.append(f"{key}: '{value}'")
-                rval.append(" ".join(error_elements))
+                if isinstance(error, Mapping):
+                    error_elements = list()
+                    for key, value in error.items():
+                        if key == "source":
+                            error_elements.append(
+                                f". Please check: {value.get('pointer')}"
+                            )
+                        else:
+                            error_elements.append(f"{key}: '{value}'")
+                    rval.append(" ".join(error_elements))
+                elif isinstance(error, str):
+                    rval.append(error)
             return ", ".join(rval)
 
 
