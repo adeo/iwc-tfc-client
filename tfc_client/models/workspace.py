@@ -1,7 +1,16 @@
 from typing import Optional, List
 from . import KebabCaseBaseModel
+from .data import AttributesModel
 
-from .vcs_repo import VCSRepoModel
+
+class VCSRepoModel(KebabCaseBaseModel):
+    branch: Optional[str]
+    ingress_submodules: Optional[bool]
+    identifier: str
+    display_identifier: Optional[str]
+    oauth_token_id: str
+    webhook_url: Optional[str]
+    default_branch: bool
 
 
 class WorkspacePermissionsModel(KebabCaseBaseModel):
@@ -21,7 +30,7 @@ class WorkspaceActionsModel(KebabCaseBaseModel):
     is_destroyable: bool
 
 
-class WorkspaceModel(KebabCaseBaseModel):
+class WorkspaceModel(AttributesModel):
     name: Optional[str]
     auto_apply: Optional[bool] = False
     environment: Optional[str]
@@ -41,13 +50,3 @@ class WorkspaceModel(KebabCaseBaseModel):
     source: Optional[str]
     source_name: Optional[str]
     source_url: Optional[str]
-
-
-class WorkspaceDataModel(KebabCaseBaseModel):
-    id: Optional[str]
-    type: str = "workspaces"
-    attributes: Optional[WorkspaceModel]
-
-
-class WorkspaceRootModel(KebabCaseBaseModel):
-    data: WorkspaceDataModel

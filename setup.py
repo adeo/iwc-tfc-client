@@ -29,5 +29,13 @@ setuptools.setup(
         "test": ["pytest", "coverage", "pytest-cov"],
     },
     tests_require=["pytest", "pytest-cov"],
-    install_requires=["requests", "pydantic", "pydantic[email]", "inflection"],
+    install_requires=[
+        "requests",
+        "pydantic",
+        "pydantic[email]",
+        "email-validator>=1.0.3",
+        "idna>=2.0.0",
+        "dnspython>=1.15.0",
+        "inflection",
+    ],
 )

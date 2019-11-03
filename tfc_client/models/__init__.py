@@ -23,8 +23,9 @@ class KebabCaseBaseModel(BaseModel):
         )
 
 
-from .workspace import WorkspaceModel
+from .workspace import WorkspaceModel, VCSRepoModel
 from .organization import OrganizationModel
-from .vcs_repo import VCSRepoModel
 from .var import VarModel
 from .run import RunModel
+from .data import DataModel
+from .ssh_key import SshKeyModel
