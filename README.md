@@ -13,7 +13,7 @@ You can get all TFC objects by id with :
 ```python
 from tfc_client import TFCClient
 from tfc_client.enums import RunStatus
-from tfc_client.models import VCSRepoModel, WorkspaceModel
+from tfc_client.models import VCSRepoModel
 
 # Instanciate the client
 client = TFCClient(token="WXDFR3ZSDFGYTdftredfgtre")
@@ -49,11 +49,11 @@ vcs_repo = VCSRepoModel(
 )
 
 # Finally: Send the workspace object to TFC API:
-my_ws = my_org.create_workspace(name="my_workspace_test", terraform_version="0.11.10", working_directory="", vcs_repo=vcs_repo)
+my_ws = my_org.create("workspace", name="my_workspace_test", terraform_version="0.11.10", working_directory="", vcs_repo=vcs_repo)
 
 
 # Launch a run on a workspace:
-my_run = my_ws.create_run(message="Run run run")
+my_run = my_ws.create("run", message="Run run run")
 
 # Wait for the run plan execution
 if my_run.wait_plan(timeout=200, progress_callback=lambda run, duration: print(f"{run.id} status is {run.status}")):
@@ -80,7 +80,7 @@ for run in my_ws.runs:
     print(f"{run.id}: {run.status}")
 
 # Delete the workspace
-my_org.delete_workspace(my_ws.id)
+my_org.delete(my_ws)
 ```
 
 
