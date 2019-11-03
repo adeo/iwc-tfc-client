@@ -6,9 +6,7 @@ import time
 from tfc_client import TFCClient
 from tfc_client.enums import RunStatus, WorkspaceSort
 
-from tfc_client.models.vcs_repo import VCSRepoModel
-from tfc_client.models.workspace import WorkspaceModel
-from tfc_client.models.organization import OrganizationModel
+from tfc_client.models.workspace import VCSRepoModel
 
 
 from example_config import (
@@ -32,7 +30,7 @@ clear_after = "\x1b[K"
 
 # logging.basicConfig(level=logging.DEBUG)
 
-if False and user_token:
+if user_token:
     admin_client = TFCClient(user_token)
 
     org_name = "{}{:05d}".format(test_org_prefix, randint(1, 99999))
@@ -52,9 +50,11 @@ if False and user_token:
     input("Press Enter to continue...")
 
     for org in admin_client.organizations:
-        print("*", org.name)
         if re.match(test_org_prefix + r"\d{5}", org.name):
             admin_client.destroy_organization(org.name)
+            print("-", org.name)
+        else:
+            print("*", org.name)
 
 client = TFCClient(team_token)
 
@@ -62,21 +62,27 @@ print(f"OAuth-token: {github_oauth}")
 ot = client.get_oauth_token(github_oauth)
 print(ot.created_at)
 
-tfc = client.get_organization(org_id)
-print(f"Now connected on organization '{tfc.name}' with Team Token")
+
+my_org = client.get("organization", org_id)
+
+print(f"Now connected on organization '{my_org.name}' with Team Token")
 
 print("Create an ssh_key")
-sshkey_name = "{}{:05d}".format(test_org_prefix+"sshkey", randint(1, 99999))
-tfc.create_ssh_key(name=sshkey_name, value="-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEAm6+JVgl...")
+sshkey_name = "{}{:05d}".format(test_org_prefix + "sshkey", randint(1, 99999))
+my_org.create(
+    "ssh-key",
+    name=sshkey_name,
+    value="-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEAm6+JVgl...",
+)
 
-for sshkey in tfc.ssh_keys:
+for sshkey in my_org.ssh_keys:
     print("sshkey:", sshkey.id)
-    if re.match(test_org_prefix+"sshkey" + r"\d{5}", sshkey.name):
-            tfc.delete_ssh_key(sshkey)
+    if re.match(test_org_prefix + "sshkey" + r"\d{5}", sshkey.name):
+        my_org.delete(sshkey)
 
 
 print("List the 5 first workspaces")
-for ws in tfc.workspaces_search(
+for ws in my_org.workspaces_search(
     include="current-run", limit=5, sort=WorkspaceSort.current_run
 ):
     print("workspace name:", ws.name)
@@ -90,7 +96,7 @@ for ws in tfc.workspaces_search(
     except AttributeError:
         pass
     print(" - List variables")
-    print("   -->", ", ".join(ws.variables.keys()))
+    print("   -->", ", ".join([var.key for var in ws.vars]))
 
     print(" - List runs")
     for run in ws.runs:
@@ -109,7 +115,7 @@ vcs_repo = VCSRepoModel(
 )
 
 
-new_ws = tfc.create_workspace(name=ws_name, vcs_repo=vcs_repo)
+new_ws = my_org.create("workspace", name=ws_name, vcs_repo=vcs_repo)
 
 print(
     f"Check version of workspace named '{new_ws.name}': {new_ws.terraform_version} (default value)"
@@ -125,22 +131,22 @@ input("Press Enter to continue")
 ws_by_id = client.get_workspace(id=new_ws.id)
 print("ws_by_id:", ws_by_id.name)
 
-ws_by_name = tfc.workspace(name=new_ws.name)
+ws_by_name = my_org.workspace(name=new_ws.name)
 print("ws_by_name:", ws_by_name.name)
 
 print("Add a variable 'bar' ...")
 
-my_var = new_ws.create_variable(key="bar", value="test")
-my_var_to_delete = new_ws.create_variable(key="todelete", value="dontchangeme")
+my_var = new_ws.create("var", key="bar", value="test")
+my_var_to_delete = new_ws.create("var", key="todelete", value="dontchangeme")
 
 print(f"my_var named {my_var.key} = '{my_var.value}'")
 my_var.modify(value="toto")
 print(f"after modify, my_var named {my_var.key} = '{my_var.value}'")
-new_ws.delete_variable(my_var_to_delete.id)
+new_ws.delete(my_var_to_delete)
 input("Press Enter to continue")
 
 print("Create a run...")
-my_run = new_ws.create_run(message="First Try !")
+my_run = new_ws.create("run", message="First Try !")
 
 
 def tail_plan_log(duration, run):
@@ -185,7 +191,7 @@ print("\n" * 11)
 
 input(f"Press Enter to delete test workspaces...{clear_after}")
 
-for ws in tfc.workspaces_search(search=test_ws_prefix):
+for ws in my_org.workspaces_search(search=test_ws_prefix):
     if re.match(test_ws_prefix + r"\d{5}", ws.name):
         print("delete", ws.id, ws.name)
-        tfc.delete_workspace(ws.id)
+        my_org.delete(ws)

@@ -1,8 +1,10 @@
-from typing import Optional
+from typing import Optional, Any
 
 from . import KebabCaseBaseModel
-from .workspace import WorkspaceRootModel
+
+# from .data import RootModel
 
 
 class RelationshipsModel(KebabCaseBaseModel):
-    workspace: Optional[WorkspaceRootModel]
+    # Can't write RootModel here because of circular reference
+    workspace: Optional[Any]

@@ -2,6 +2,7 @@ from typing import Optional
 from pydantic import EmailStr
 
 from . import KebabCaseBaseModel
+from .data import AttributesModel
 from .relationship import RelationshipsModel
 
 
@@ -19,7 +20,7 @@ class OrganizationPermissionsModel(KebabCaseBaseModel):
     can_create_workspace_migration: Optional[bool]
 
 
-class OrganizationModel(KebabCaseBaseModel):
+class OrganizationModel(AttributesModel):
     name: Optional[str]
     external_id: Optional[str]
     created_at: Optional[str]
