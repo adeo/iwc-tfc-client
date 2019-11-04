@@ -1,6 +1,10 @@
 from collections.abc import Mapping, Iterable
+from typing import Any, Dict, Generator, List, NoReturn, Optional, TYPE_CHECKING
 
 from .util import InflectionStr
+
+if TYPE_CHECKING:
+    from .tfc_client import TFCClient
 
 
 class TFCObject(object):
@@ -24,9 +28,15 @@ class TFCObject(object):
     can_create = None
     url_prefix = ""
 
-    def __init__(self, client, data, include=None, init_from_data=True):
+    def __init__(
+        self,
+        client: "TFCClient",
+        data: Mapping,
+        include: List[Dict[str, dict]] = None,
+        init_from_data=True,
+    ):
         self.client = client
-        self.attrs = dict()
+        self.attrs: Dict[str, Dict[str, TFCObject]] = dict()
         self.attrs["workspaces"] = dict()
         self.attrs["runs"] = dict()
         self.attrs["vars"] = dict()
@@ -44,7 +54,7 @@ class TFCObject(object):
                             included_data
                         )
 
-    def _init_from_data(self, data):
+    def _init_from_data(self, data: Mapping) -> NoReturn:
         if "attributes" in data:
             self.attributes = data["attributes"]
         if "relationships" in data:
@@ -52,8 +62,8 @@ class TFCObject(object):
         if "links" in data:
             self.links = data["links"]
 
-    def _get_data(self, element):
-        if element not in self.attrs:
+    def _get_data(self, object_type) -> NoReturn:
+        if object_type not in self.attrs:
             if self.links and "related" in self.links:
                 data_url = self.links["related"]
             else:
@@ -62,7 +72,7 @@ class TFCObject(object):
             api_response = self.client._api.get(path=data_url)
             self._init_from_data(api_response.data)
 
-    def refresh(self):
+    def refresh(self) -> NoReturn:
         self.attrs = dict()
         self.attrs["workspaces"] = dict()
         self.attrs["runs"] = dict()
@@ -70,25 +80,25 @@ class TFCObject(object):
         self.attrs["ssh-keys"] = dict()
 
     @property
-    def attributes(self):
+    def attributes(self) -> Mapping:
         if "attributes" not in self.attrs:
             self._get_data("attributes")
         return self.attrs["attributes"]
 
     @attributes.setter
-    def attributes(self, attributes_dict):
-        self.attrs["attributes"] = attributes_dict
+    def attributes(self, attributes: Dict[str, Any]):
+        self.attrs["attributes"] = attributes
 
     @property
-    def relationships(self):
+    def relationships(self) -> Optional[Dict[str, "TFCObject"]]:
         if "relationships" not in self.attrs:
             self._get_data("relationships")
         return self.attrs.get("relationships")
 
     @relationships.setter
-    def relationships(self, relationships_dict):
+    def relationships(self, relationships: Dict[str, dict]):
         self.attrs["relationships"] = dict()
-        for relationship_key, relationship_value in relationships_dict.items():
+        for relationship_key, relationship_value in relationships.items():
             if "data" in relationship_value:
                 if isinstance(relationship_value["data"], Mapping):
                     self.attrs["relationships"][relationship_key] = self.client.factory(
@@ -102,14 +112,14 @@ class TFCObject(object):
                         )
 
     @property
-    def links(self):
+    def links(self) -> Optional[Dict[str, "TFCObject"]]:
         return self.attrs.get("links")
 
     @links.setter
-    def links(self, links_dict):
-        self.attrs["links"] = links_dict
+    def links(self, links):
+        self.attrs["links"] = links
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.id
 
     def __getattr__(self, key):

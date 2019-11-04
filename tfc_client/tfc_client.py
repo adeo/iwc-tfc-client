@@ -3,6 +3,7 @@ import hashlib
 import importlib
 import re
 import time
+from typing import Generator, NoReturn
 
 from .models.data import DataModel, RootModel
 from .models.organization import OrganizationModel
@@ -10,6 +11,7 @@ from .util import InflectionStr
 
 from .api_caller import APICaller
 from .tfc_object import TFCObject
+from .tfc_objects import TFCOrganization
 
 
 class TFCClient(object):
@@ -34,24 +36,11 @@ class TFCClient(object):
         }
         self._api = APICaller(host=url, base_url="api/v2", headers=headers)
 
-    def get(self, object_type, id):
+    def get(self, object_type: str, id: str) -> TFCObject:
         object_type = InflectionStr(object_type).dasherize.pluralize
         return self.factory({"type": object_type, "id": id})
 
-    def __getattr__(self, attr):
-        if attr.startswith("get_"):
-            object_type = attr[4:]
-
-            def _get_object_type(*args, **kwargs):
-                return self.get(
-                    object_type, id=kwargs["id"] if "id" in kwargs else args[0]
-                )
-
-            return _get_object_type
-        else:
-            raise AttributeError(attr)
-
-    def create_organization(self, **kwargs):
+    def create_organization(self, **kwargs) -> TFCOrganization:
         organization_model = OrganizationModel(**kwargs)
         payload = RootModel(
             data=DataModel(type="organizations", attributes=organization_model)
@@ -59,16 +48,16 @@ class TFCClient(object):
         api_response = self._api.post(path=f"organizations", data=payload.json())
         return self.factory(api_response.data)
 
-    def destroy_organization(self, organization_name):
+    def destroy_organization(self, organization_name: str) -> NoReturn:
         self._api.delete(path=f"organizations/{organization_name}")
 
     @property
-    def organizations(self):
+    def organizations(self) -> Generator[TFCObject, None, None]:
         for api_response in self._api.get_list(path=f"organizations"):
             for org_data in api_response.data:
                 yield self.factory(org_data)
 
-    def factory(self, data, include=None):
+    def factory(self, data: dict, include: str = None) -> TFCObject:
         object_type = InflectionStr(data["type"])
         class_name = "TFC{type}".format(
             type=object_type.singularize.underscore.camelize

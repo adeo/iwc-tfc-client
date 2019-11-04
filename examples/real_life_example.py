@@ -59,7 +59,7 @@ if user_token:
 client = TFCClient(team_token)
 
 print(f"OAuth-token: {github_oauth}")
-ot = client.get_oauth_token(github_oauth)
+ot = client.get("oauth-token", github_oauth)
 print(ot.created_at)
 
 
@@ -128,7 +128,7 @@ print(
 
 input("Press Enter to continue")
 
-ws_by_id = client.get_workspace(id=new_ws.id)
+ws_by_id = client.get("workspace", id=new_ws.id)
 print("ws_by_id:", ws_by_id.name)
 
 ws_by_name = my_org.workspace(name=new_ws.name)

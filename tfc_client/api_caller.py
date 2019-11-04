@@ -1,4 +1,5 @@
 from collections.abc import Iterable, Mapping
+from typing import Dict, Generator, Union
 
 import requests
 
@@ -36,12 +37,14 @@ class APIResponse(object):
 
 
 class APICaller(object):
-    def __init__(self, host, base_url, headers=None):
+    def __init__(self, host: str, base_url: str, headers: Mapping = None):
         self._host = host
         self._base_url = base_url
         self._headers = headers
 
-    def _call(self, method="get", path="/", *args, **kwargs):
+    def _call(
+        self, method: str = "get", path: str = "/", *args, **kwargs
+    ) -> Union[APIResponse, bool]:
         message = ""
         requester = getattr(requests, method.lower())
         if path.startswith("/"):
@@ -69,7 +72,7 @@ class APICaller(object):
         raise APIException(response_error)
 
     @staticmethod
-    def _dict_to_params(object_name, object_content):
+    def _dict_to_params(object_name: str, object_content: Mapping):
         filters = {}
         for object_type, content in object_content.items():
             for field_name, field_value in content.items():
@@ -78,16 +81,16 @@ class APICaller(object):
 
     def get_list(
         self,
-        params=None,
+        params: Dict[str, str] = None,
         page_number=1,
         page_size=20,
-        search=None,
-        filters=None,
-        include=None,
-        sort=None,
+        search: str = None,
+        filters: Mapping = None,
+        include: str = None,
+        sort: str = None,
         *args,
         **kwargs,
-    ):
+    ) -> Generator[Union[APIResponse, bool], None, None]:
         if not params:
             params = dict()
         if filters:
@@ -106,38 +109,43 @@ class APICaller(object):
 
         api_response = self._call(method="get", params=params, **kwargs)
 
-        if isinstance(api_response.data, Iterable):
+        if isinstance(api_response, APIResponse):
             while True:
                 yield api_response
 
-                if api_response.meta and "pagination" in api_response.meta:
-                    params["page[number]"] = api_response.meta["pagination"].get(
-                        "next-page"
-                    )
+                if (
+                    api_response.meta  # type: ignore
+                    and "pagination" in api_response.meta  # type: ignore
+                ):
+                    params["page[number]"] = api_response.meta[  # type: ignore
+                        "pagination"
+                    ].get("next-page")
                     if params["page[number]"]:
                         api_response = self._call(method="get", params=params, **kwargs)
                         continue
 
                 break
         else:
-            raise TypeError("data is not a list")
+            raise TypeError("api_response is not an APIResponse instance")
 
-    def get_raw(self, path, *args, **kwargs):
+    def get_raw(self, path: str, *args, **kwargs) -> str:
         response = requests.get(path)
         if response.status_code < 400:
             return response.text
+        else:
+            raise APIException("Error: {}".format(response.status_code))
 
-    def get(self, *args, **kwargs):
+    def get(self, *args, **kwargs) -> Union[APIResponse, bool]:
         return self._call(method="get", **kwargs)
 
-    def put(self, *args, **kwargs):
+    def put(self, *args, **kwargs) -> Union[APIResponse, bool]:
         return self._call(method="put", **kwargs)
 
-    def post(self, *args, **kwargs):
+    def post(self, *args, **kwargs) -> Union[APIResponse, bool]:
         return self._call(method="post", **kwargs)
 
-    def patch(self, *args, **kwargs):
+    def patch(self, *args, **kwargs) -> Union[APIResponse, bool]:
         return self._call(method="patch", **kwargs)
 
-    def delete(self, *args, **kwargs):
+    def delete(self, *args, **kwargs) -> Union[APIResponse, bool]:
         return self._call(method="delete", **kwargs)

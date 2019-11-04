@@ -3,6 +3,7 @@ import hashlib
 import importlib
 import re
 import time
+from typing import Generator, List, Callable, TYPE_CHECKING
 
 from .models.data import RootModel, DataModel
 from .models.run import RunModel
@@ -16,9 +17,17 @@ from .util import InflectionStr
 from .enums import RunStatus, VarCat, WorkspaceSort
 
 
-class Paginable(object):
+if TYPE_CHECKING:
+    from .tfc_client import TFCClient
+
+    Mixin = TFCObject
+else:
+    Mixin = object
+
+
+class Paginable(Mixin):
     @property
-    def pagination(self):
+    def pagination(self) -> Mapping:
         if "pagination" not in self.attrs:
             api_response = self.client._api.get(
                 path=f"organizations/{self.name}/workspaces", params={"page[size]": 1}
@@ -28,12 +37,14 @@ class Paginable(object):
         return self.attrs.get("pagination", {})
 
     @pagination.setter
-    def pagination(self, pagination_dict):
-        self.attrs["pagination"] = pagination_dict
+    def pagination(self, pagination: Mapping):
+        self.attrs["pagination"] = pagination
 
 
-class Creatable(object):
-    def get_list(self, object_type, filters=None, url_prefix=None):
+class Creatable(Mixin):
+    def get_list(
+        self, object_type: str, filters: str = None, url_prefix: str = None
+    ) -> Generator[TFCObject, None, None]:
         object_type = InflectionStr(object_type).dasherize.pluralize
         path_elements = list()
         if url_prefix is not None:
@@ -56,7 +67,7 @@ class Creatable(object):
                 self.attrs[object_type][tfc_object.id] = tfc_object
                 yield self.attrs[object_type][tfc_object.id]
 
-    def create(self, object_type, url_prefix=None, **kwargs):
+    def create(self, object_type: str, url_prefix: str = None, **kwargs) -> TFCObject:
         if self.can_create:
             object_type = InflectionStr(object_type).dasherize.pluralize
             path_elements = list()
@@ -104,15 +115,15 @@ class Creatable(object):
                 self.attrs[object_type][tfc_object.id] = tfc_object
                 return tfc_object
 
-    def delete(self, tfc_object):
+    def delete(self, tfc_object: TFCObject):
         id = str(tfc_object)
         if id in self.attrs.get(tfc_object.type, []):
             del self.attrs[tfc_object.type][id]
         return self.client._api.delete(path=f"{tfc_object.type}/{id}")
 
 
-class Modifiable(object):
-    def modify(self, **kwargs):
+class Modifiable(Mixin):
+    def modify(self, **kwargs) -> TFCObject:
         model_class_name = "{type}Model".format(
             type=InflectionStr(self.type).underscore.camelize.singularize
         )
@@ -132,91 +143,32 @@ class Modifiable(object):
         return self
 
 
-class Loggable(object):
+class Loggable(Mixin):
     @property
-    def log_colored(self):
+    def log_colored(self) -> str:
         if "log" not in self.attrs:
             self.attrs["log"] = self.client._api.get_raw(path=self.log_read_url)
         return self.attrs["log"]
 
     @property
-    def log(self):
+    def log(self) -> str:
         return re.sub(r"\x1b(\[.*?[@-~]|\].*?(\x07|\x1b\\))", "", self.log_colored)
 
 
-class TFCWorkspace(TFCObject, Paginable, Modifiable, Creatable):
-    type = "workspaces"
-    can_create = ["vars", "runs"]
-
-    def get_list(self, object_type, filters=None, url_prefix=None):
-        object_type = InflectionStr(object_type).dasherize.pluralize
-        if url_prefix is None:
-            url_prefix = f"{self.type}/{self.id}"
-        return super().get_list(object_type, filters=filters, url_prefix=url_prefix)
-
-    @property
-    def vars(self):
-        filters = {
-            "workspace": {"name": self.name},
-            "organization": {"name": self.organization.id},
-        }
-        url_prefix = ""
-        return self.get_list("vars", filters=filters, url_prefix=url_prefix)
-
-    @vars.setter
-    def vars(self, variables_list):
-        for data in variables_list:
-            var_object = self.client.factory(data)
-            if "vars" not in self.attrs:
-                self.attrs["vars"] = dict()
-            self.attrs["vars"][var_object.key] = var_object
-
-    def create(self, object_type, url_prefix=None, **kwargs):
-        object_type = InflectionStr(object_type).dasherize.pluralize
-        if object_type in ["vars"]:
-            if "category" not in kwargs:
-                kwargs["category"] = VarCat.terraform
-        if object_type in ["runs", "vars"]:
-            url_prefix = ""
-            kwargs["workspace"] = self
-        if object_type in ["runs"]:
-            if not kwargs["message"]:
-                kwargs["message"] = "Queued manually via the Terraform Enterprise API"
-            if "is_destroy" not in kwargs or not isinstance(kwargs["is_destroy"], bool):
-                kwargs["is_destroy"] = False
-
-        return super().create(object_type, url_prefix=url_prefix, **kwargs)
-
-    @property
-    def runs(self):
-        return self.get_list("runs")
-
-    def do_lock(self):
-        if self.client._api.post(path=f"workspaces/{self.id}/actions/lock"):
-            self.refresh()
-            return True
-
-    def do_unlock(self, force=False):
-        if force:
-            api_path = f"workspaces/{self.id}/actions/unlock"
-        else:
-            api_path = f"workspaces/{self.id}/actions/force-unlock"
-
-        if self.client._api.post(path=api_path):
-            self.refresh()
-            return True
-
-
-class TFCApply(TFCObject, Loggable):
-    type = "applies"
+class TFCVar(TFCObject, Modifiable):
+    type = "vars"
 
 
 class TFCRun(TFCObject):
     type = "runs"
 
     def wait_run(
-        self, target_status, sleep_time=3, timeout=600, progress_callback=None
-    ):
+        self,
+        target_status: List[RunStatus],
+        sleep_time=3,
+        timeout=600,
+        progress_callback: Callable = None,
+    ) -> bool:
         if not progress_callback or not callable(progress_callback):
             progress_callback = None
 
@@ -234,7 +186,9 @@ class TFCRun(TFCObject):
             else:
                 return False
 
-    def wait_plan(self, sleep_time=3, timeout=600, progress_callback=None):
+    def wait_plan(
+        self, sleep_time=3, timeout=600, progress_callback: Callable = None
+    ) -> bool:
         target_status = [
             RunStatus.planned,
             RunStatus.planned_and_finished,
@@ -247,7 +201,9 @@ class TFCRun(TFCObject):
             progress_callback=progress_callback,
         )
 
-    def wait_apply(self, sleep_time=3, timeout=600, progress_callback=None):
+    def wait_apply(
+        self, sleep_time=3, timeout=600, progress_callback: Callable = None
+    ) -> bool:
         target_status = [RunStatus.errored, RunStatus.applied]
         return self.wait_run(
             sleep_time=sleep_time,
@@ -256,7 +212,7 @@ class TFCRun(TFCObject):
             progress_callback=progress_callback,
         )
 
-    def do_apply(self, comment=None):
+    def do_apply(self, comment: str = None) -> bool:
         if self.client._api.post(
             path=f"runs/{self.id}/actions/apply",
             json={"comment": comment} if comment else None,
@@ -264,7 +220,7 @@ class TFCRun(TFCObject):
             self.refresh()
             return True
 
-    def do_discard(self, comment=None):
+    def do_discard(self, comment: str = None) -> bool:
         if self.client._api.post(
             path=f"runs/{self.id}/actions/discard",
             json={"comment": comment} if comment else None,
@@ -272,7 +228,7 @@ class TFCRun(TFCObject):
             self.refresh()
             return True
 
-    def do_cancel(self, comment=None, force=False):
+    def do_cancel(self, comment: str = None, force: bool = False) -> bool:
         payload_json = {"comment": comment} if comment else None
         if force:
             api_path = f"runs/{self.id}/actions/force-cancel"
@@ -283,17 +239,86 @@ class TFCRun(TFCObject):
             self.refresh()
             return True
 
-    def do_force_execute(self):
+    def do_force_execute(self) -> bool:
         if self.client._api.post(path=f"runs/{self.id}/actions/force-execute"):
             self.refresh()
             return True
+
+
+class TFCWorkspace(TFCObject, Paginable, Modifiable, Creatable):
+    type = "workspaces"
+    can_create = ["vars", "runs"]
+
+    def get_list(
+        self, object_type: str, filters: Mapping = None, url_prefix=None
+    ) -> Generator["TFCWorkspace", None, None]:
+        object_type = InflectionStr(object_type).dasherize.pluralize
+        if url_prefix is None:
+            url_prefix = f"{self.type}/{self.id}"
+        return super().get_list(object_type, filters=filters, url_prefix=url_prefix)
+
+    @property
+    def vars(self) -> Generator[TFCVar, None, None]:
+        filters = {
+            "workspace": {"name": self.name},
+            "organization": {"name": self.organization.id},
+        }
+        url_prefix = ""
+        return self.get_list("vars", filters=filters, url_prefix=url_prefix)
+
+    @vars.setter
+    def vars(self, variables_list: Mapping):
+        for data in variables_list:
+            var_object = self.client.factory(data)
+            if "vars" not in self.attrs:
+                self.attrs["vars"] = dict()
+            self.attrs["vars"][var_object.key] = var_object
+
+    def create(self, object_type: str, url_prefix: str = None, **kwargs) -> TFCObject:
+        object_type = InflectionStr(object_type).dasherize.pluralize
+        if object_type in ["vars"]:
+            if "category" not in kwargs:
+                kwargs["category"] = VarCat.terraform
+        if object_type in ["runs", "vars"]:
+            url_prefix = ""
+            kwargs["workspace"] = self
+        if object_type in ["runs"]:
+            if not kwargs["message"]:
+                kwargs["message"] = "Queued manually via the Terraform Enterprise API"
+            if "is_destroy" not in kwargs or not isinstance(kwargs["is_destroy"], bool):
+                kwargs["is_destroy"] = False
+
+        return super().create(object_type, url_prefix=url_prefix, **kwargs)
+
+    @property
+    def runs(self) -> Generator[TFCRun, None, None]:
+        return self.get_list("runs")
+
+    def do_lock(self) -> bool:
+        if self.client._api.post(path=f"workspaces/{self.id}/actions/lock"):
+            self.refresh()
+            return True
+
+    def do_unlock(self, force: bool = False) -> bool:
+        if force:
+            api_path = f"workspaces/{self.id}/actions/unlock"
+        else:
+            api_path = f"workspaces/{self.id}/actions/force-unlock"
+
+        if self.client._api.post(path=api_path):
+            self.refresh()
+            return True
+
+
+class TFCApply(TFCObject, Loggable):
+    type = "applies"
 
 
 class TFCPlan(TFCObject, Loggable):
     type = "plans"
 
     @property
-    def log_resume(self):
+    def log_resume(self) -> str:
         return "\n".join(
             [
                 line
@@ -306,7 +331,7 @@ class TFCPlan(TFCObject, Loggable):
         )
 
     @property
-    def log_changes(self):
+    def log_changes(self) -> str:
         return_lines = False
         filtered_log = ""
         for line in self.log.splitlines():
@@ -317,7 +342,7 @@ class TFCPlan(TFCObject, Loggable):
         return filtered_log
 
     @property
-    def log_signature(self):
+    def log_signature(self) -> str:
         return hashlib.sha256(bytes(self.log_resume, encoding="utf-8")).hexdigest()
 
 
@@ -327,10 +352,6 @@ class TFCSshKey(TFCObject, Modifiable):
 
 class TFCEntitlementSet(TFCObject):
     type = "entitlement-sets"
-
-
-class TFCVar(TFCObject, Modifiable):
-    type = "vars"
 
 
 class TFCComment(TFCObject):
@@ -365,12 +386,18 @@ class TFCOrganization(TFCObject, Paginable, Modifiable, Creatable):
     type = "organizations"
     can_create = ["workspaces", "ssh-keys"]
 
-    def __init__(self, client, data, include=None, init_from_data=True):
+    def __init__(
+        self,
+        client: "TFCClient",
+        data: Mapping,
+        include: str = None,
+        init_from_data: bool = True,
+    ):
         self.url_prefix = f"organizations/{data['id']}"
         super().__init__(client, data, include, init_from_data)
 
     @property
-    def status_counts(self):
+    def status_counts(self) -> Mapping:
         if "status-counts" not in self.attrs:
             api_response = self.client._api.get(
                 path=f"organizations/{self.name}/workspaces", params={"page[size]": 1}
@@ -380,20 +407,26 @@ class TFCOrganization(TFCObject, Paginable, Modifiable, Creatable):
         return self.attrs.get("status-counts", {})
 
     @status_counts.setter
-    def status_counts(self, status_counts_dict):
-        self.attrs["status-counts"] = status_counts_dict
+    def status_counts(self, status_counts: Mapping):
+        self.attrs["status-counts"] = status_counts
 
     @property
-    def workspaces(self):
+    def workspaces(self) -> Generator[TFCWorkspace, None, None]:
         return self.get_list("workspaces")
 
     @property
-    def ssh_keys(self):
+    def ssh_keys(self) -> Generator[TFCSshKey, None, None]:
         return self.get_list("ssh-keys")
 
     def workspaces_search(
-        self, *, search=None, filters=None, include=None, sort=None, limit=None
-    ):
+        self,
+        *,
+        search: str = None,
+        filters: str = None,
+        include: str = None,
+        sort: WorkspaceSort = None,
+        limit: int = None,
+    ) -> Generator[TFCWorkspace, None, None]:
         organization = self.name
 
         if sort and not isinstance(sort, WorkspaceSort):
@@ -437,7 +470,7 @@ class TFCOrganization(TFCObject, Paginable, Modifiable, Creatable):
                 yield self.attrs["workspaces"][ws_id]
                 count += 1
 
-    def workspace(self, name):
+    def workspace(self, name: str) -> TFCWorkspace:
         workspace_id = None
         ws_ids = [
             ws_id for ws_id, ws in self.attrs["workspaces"].items() if ws.name == name

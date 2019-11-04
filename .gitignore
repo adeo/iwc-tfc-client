@@ -22,3 +22,4 @@ htmlcov
 .eggs
 *.egg-info
 examples/example_config.py
+.mypy_cache
