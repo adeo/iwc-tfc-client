@@ -113,7 +113,13 @@ vcs_repo = VCSRepoModel(
     default_branch=True,
 )
 
-new_ws = my_org.create("workspace", name=ws_name, vcs_repo=vcs_repo)
+new_ws = my_org.create(
+    "workspace",
+    name=ws_name,
+    vcs_repo=vcs_repo,
+    source_name="TFC Python Client",
+    source_url="https://pypi.org/project/tfc-client/",
+)
 
 print("Create a Notification configuration")
 my_notification = new_ws.create(

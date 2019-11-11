@@ -10,7 +10,8 @@ from tfc_client.enums import (
     RunStatus,
     NotificationTrigger,
     NotificationsDestinationType,
-)from tfc_client.models import VCSRepoModel
+)
+from tfc_client.models import VCSRepoModel
 
 # Instanciate the client
 client = TFCClient(token="WXDFR3ZSDFGYTdftredfgtre")
@@ -53,7 +54,15 @@ vcs_repo = VCSRepoModel(
 )
 
 # Finally: Send the workspace object to TFC API:
-my_ws = my_org.create("workspace", name="my_workspace_test", terraform_version="0.11.10", working_directory="", vcs_repo=vcs_repo)
+my_ws = my_org.create(
+    "workspace",
+    name="my_workspace_test",
+    terraform_version="0.11.10",
+    working_directory="",
+    vcs_repo=vcs_repo,
+    source_name="TFC Python Client",
+    source_url="https://pypi.org/project/tfc-client/"
+)
 
 # Assign a ssh-key to the workspace:
 my_ws.assign("ssh-key", my_sshkey)

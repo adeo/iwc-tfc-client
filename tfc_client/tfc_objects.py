@@ -188,7 +188,7 @@ class TFCNotificationConfiguration(TFCObject):
 
     def do_verify(self) -> bool:
         api_response = self.client._api.post(
-            path=f"notification-configurations/{self.id}/actions/verify",
+            path=f"notification-configurations/{self.id}/actions/verify"
         )
         if api_response.data:
             self._init_from_data(api_response.data)
