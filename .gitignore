@@ -1,4 +1,7 @@
 *.pyc
+*.swp
+build/
+dist/
 venv/
 .factory.secret
 env/*/secret.cfg

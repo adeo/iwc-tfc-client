@@ -2,10 +2,6 @@
 
 Try to offer a good python object interface to Terraform Cloud API.
 
-## Name proposal
-
-kishi : "Earth snake" in Japanese.
-
 ## Quick start
 
 You can get all TFC objects by id with :
