@@ -54,7 +54,6 @@ class Creatable(Mixin):
             path_elements.append(self.url_prefix)
         path_elements.append(object_type)
         path = "/".join(path_elements)
-        print("path:", path)
         for api_response in self.client._api.get_list(path=path, filters=filters):
             if "pagination" in api_response.meta:
                 self.pagination = api_response.meta["pagination"]
@@ -114,6 +113,8 @@ class Creatable(Mixin):
                     self.attrs[object_type] = dict()
                 self.attrs[object_type][tfc_object.id] = tfc_object
                 return tfc_object
+            else:
+                raise AttributeError(f"Can create {object_type} from {self.type}")
 
     def delete(self, tfc_object: TFCObject):
         id = str(tfc_object)
@@ -142,6 +143,7 @@ class Modifiable(Mixin):
             self.id = api_response.data["id"]
         return self
 
+
 class Assignable(Mixin):
     def assign(self, relation_name: str = None, assigned_object: TFCObject = None):
         if relation_name:
@@ -164,6 +166,7 @@ class Assignable(Mixin):
         self.refresh()
         return self
 
+
 class Loggable(Mixin):
     @property
     def log_colored(self) -> str:
@@ -178,6 +181,20 @@ class Loggable(Mixin):
 
 class TFCVar(TFCObject, Modifiable):
     type = "vars"
+
+
+class TFCNotificationConfiguration(TFCObject):
+    type = "notification-configurations"
+
+    def do_verify(self) -> bool:
+        api_response = self.client._api.post(
+            path=f"notification-configurations/{self.id}/actions/verify",
+        )
+        if api_response.data:
+            self._init_from_data(api_response.data)
+            return self.delivery_responses
+        else:
+            return None
 
 
 class TFCRun(TFCObject):
@@ -268,7 +285,7 @@ class TFCRun(TFCObject):
 
 class TFCWorkspace(TFCObject, Paginable, Modifiable, Creatable, Assignable):
     type = "workspaces"
-    can_create = ["vars", "runs"]
+    can_create = ["vars", "runs", "notification-configurations"]
 
     def get_list(
         self, object_type: str, filters: Mapping = None, url_prefix=None
@@ -303,6 +320,8 @@ class TFCWorkspace(TFCObject, Paginable, Modifiable, Creatable, Assignable):
         if object_type in ["runs", "vars"]:
             url_prefix = ""
             kwargs["workspace"] = self
+        if object_type in ["notification-configurations"]:
+            url_prefix = f"workspaces/{self.id}"
         if object_type in ["runs"]:
             if not kwargs["message"]:
                 kwargs["message"] = "Queued manually via the Terraform Enterprise API"

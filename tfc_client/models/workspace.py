@@ -1,4 +1,7 @@
 from typing import Optional, List
+
+from pydantic import HttpUrl
+
 from . import KebabCaseBaseModel
 from .data import AttributesModel
 
@@ -9,7 +12,7 @@ class VCSRepoModel(KebabCaseBaseModel):
     identifier: str
     display_identifier: Optional[str]
     oauth_token_id: str
-    webhook_url: Optional[str]
+    webhook_url: Optional[HttpUrl]
     default_branch: bool
 
 
@@ -49,4 +52,4 @@ class WorkspaceModel(AttributesModel):
     trigger_prefixes: Optional[List[str]]
     source: Optional[str]
     source_name: Optional[str]
-    source_url: Optional[str]
+    source_url: Optional[HttpUrl]

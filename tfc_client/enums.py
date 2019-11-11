@@ -36,3 +36,26 @@ class VarCat(str, Enum):
 
     def __str__(self):
         return self.value
+
+
+class NotificationTrigger(str, Enum):
+    def _generate_next_value_(name, start, count, last_values):
+        return f"run:{name}"
+
+    applying = auto()
+    completed = auto()
+    created = auto()
+    errored = auto()
+    needs_attention = auto()
+    planning = auto()
+
+    def __str__(self):
+        return self.value
+
+
+class NotificationsDestinationType(str, Enum):
+    def _generate_next_value_(name, start, count, last_values):
+        return name
+
+    generic = auto()
+    slack = auto()

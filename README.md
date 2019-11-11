@@ -6,8 +6,11 @@ Try to offer a good python object interface to Terraform Cloud API.
 
 ```python
 from tfc_client import TFCClient
-from tfc_client.enums import RunStatus
-from tfc_client.models import VCSRepoModel
+from tfc_client.enums import (
+    RunStatus,
+    NotificationTrigger,
+    NotificationsDestinationType,
+)from tfc_client.models import VCSRepoModel
 
 # Instanciate the client
 client = TFCClient(token="WXDFR3ZSDFGYTdftredfgtre")
@@ -58,7 +61,16 @@ my_ws.assign("ssh-key", my_sshkey)
 # Unassign it with:
 # my_ws.assign("ssh-key")
 
-
+# Create a Notification configuration
+my_notification = new_ws.create(
+    "notification-configuration",
+    enabled=True,
+    name="MyNotif",
+    url="https://httpstat.us/200",
+    destination_type=NotificationsDestinationType.generic,
+    token="TestToken",
+    triggers=[NotificationTrigger.created],
+)
 
 # Launch a run on a workspace:
 my_run = my_ws.create("run", message="Run run run")
@@ -100,7 +112,13 @@ Currently the following endpoints are supported:
 - [x] [Applies](https://www.terraform.io/docs/cloud/api/applies.html)
 - [ ] [Configuration Versions](https://www.terraform.io/docs/enterprise/api/configuration-versions.html)
 - [ ] [Cost Estimates](https://www.terraform.io/docs/cloud/api/cost-estimates.html)
-- [ ] [Notification Configurations](terraform.io/docs/cloud/api/notification-configurations.html)
+- [x] [Notification Configurations](terraform.io/docs/cloud/api/notification-configurations.html)
+  - [x] List
+  - [x] Show
+  - [x] Create
+  - [x] Update
+  - [x] Delete
+  - [x] Verify
 - [ ] [OAuth Clients](https://www.terraform.io/docs/enterprise/api/oauth-clients.html)
 - [ ] [OAuth Tokens](https://www.terraform.io/docs/enterprise/api/oauth-tokens.html)
 - [x] [Organizations](https://www.terraform.io/docs/enterprise/api/organizations.html)
