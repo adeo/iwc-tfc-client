@@ -5,7 +5,7 @@ import re
 import time
 from typing import Generator, List, Callable, TYPE_CHECKING
 
-from .models.data import RootModel, DataModel
+from .models.data import RootModel, DataModel, AssignModel
 from .models.run import RunModel
 from .models.relationship import RelationshipsModel
 from .models.ssh_key import SshKeyModel
@@ -142,6 +142,27 @@ class Modifiable(Mixin):
             self.id = api_response.data["id"]
         return self
 
+class Assignable(Mixin):
+    def assign(self, relation_name: str = None, assigned_object: TFCObject = None):
+        if relation_name:
+            relation_name = InflectionStr(relation_name).singularize
+        else:
+            relation_name = InflectionStr(assigned_object.type).singularize
+        model = AssignModel(id=assigned_object.id)
+        payload = RootModel(data=DataModel(type=self.type, attributes=model))
+        path = f"{self.type}/{self.id}/relationships/{relation_name}"
+        api_response = self.client._api.patch(path=path, data=payload.json())
+        self.refresh()
+        return self
+
+    def unassign(self, relation_name: str):
+        relation_name = InflectionStr(relation_name).singularize
+        model = AssignModel(id=None)
+        payload = RootModel(data=DataModel(type=self.type, attributes=model))
+        path = f"{self.type}/{self.id}/relationships/{relation_name}"
+        api_response = self.client._api.patch(path=path, data=payload.json())
+        self.refresh()
+        return self
 
 class Loggable(Mixin):
     @property
@@ -245,7 +266,7 @@ class TFCRun(TFCObject):
             return True
 
 
-class TFCWorkspace(TFCObject, Paginable, Modifiable, Creatable):
+class TFCWorkspace(TFCObject, Paginable, Modifiable, Creatable, Assignable):
     type = "workspaces"
     can_create = ["vars", "runs"]
 

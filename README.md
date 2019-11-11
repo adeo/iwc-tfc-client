@@ -4,8 +4,6 @@ Try to offer a good python object interface to Terraform Cloud API.
 
 ## Quick start
 
-You can get all TFC objects by id with :
-
 ```python
 from tfc_client import TFCClient
 from tfc_client.enums import RunStatus
@@ -22,6 +20,13 @@ my_var = client.get("var", id="var-vcerjvjk")
 
 # If you need to retreive a workspace by name, you need to retreive it from an organization object:
 my_ws = my_org.workspace(name="my_workspace")
+
+# Create a ssh key in the org
+my_sshkey = my_org.create(
+    "ssh-key",
+    name="my-ssh-key,
+    value="-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEAm6+JVgl...",
+)
 
 # To retreive all workspaces:
 for ws in my_org.workspaces:
@@ -46,6 +51,13 @@ vcs_repo = VCSRepoModel(
 
 # Finally: Send the workspace object to TFC API:
 my_ws = my_org.create("workspace", name="my_workspace_test", terraform_version="0.11.10", working_directory="", vcs_repo=vcs_repo)
+
+# Assign a ssh-key to the workspace:
+my_ws.assign("ssh-key", my_sshkey)
+
+# Unassign it with:
+# my_ws.assign("ssh-key")
+
 
 
 # Launch a run on a workspace:
@@ -141,8 +153,8 @@ Currently the following endpoints are supported:
   - [x] Lock
   - [x] Unlock
   - [x] Force Unlock
-  - [ ] Assigh SSH key
-  - [ ] Unassign SSH key
+  - [x] Assigh SSH key
+  - [x] Unassign SSH key
 - [ ] [Admin Organizations](https://www.terraform.io/docs/cloud/api/admin/organizations.html)
 - [ ] [Admin Runs](https://www.terraform.io/docs/cloud/api/admin/runs.html)
 - [ ] [Admin Settings](https://www.terraform.io/docs/cloud/api/admin/settings.html)

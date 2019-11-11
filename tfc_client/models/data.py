@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 
 from . import KebabCaseBaseModel
 from .relationship import RelationshipsModel
@@ -17,3 +17,7 @@ class DataModel(KebabCaseBaseModel):
 
 class RootModel(KebabCaseBaseModel):
     data: DataModel
+
+
+class AssignModel(AttributesModel):
+    id: Union[str, None]

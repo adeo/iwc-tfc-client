@@ -69,17 +69,11 @@ print(f"Now connected on organization '{my_org.name}' with Team Token")
 
 print("Create an ssh_key")
 sshkey_name = "{}{:05d}".format(test_org_prefix + "sshkey", randint(1, 99999))
-my_org.create(
+my_sshkey = my_org.create(
     "ssh-key",
     name=sshkey_name,
     value="-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEAm6+JVgl...",
 )
-
-for sshkey in my_org.ssh_keys:
-    print("sshkey:", sshkey.id)
-    if re.match(test_org_prefix + "sshkey" + r"\d{5}", sshkey.name):
-        my_org.delete(sshkey)
-
 
 print("List the 5 first workspaces")
 for ws in my_org.workspaces_search(
@@ -114,7 +108,6 @@ vcs_repo = VCSRepoModel(
     default_branch=True,
 )
 
-
 new_ws = my_org.create("workspace", name=ws_name, vcs_repo=vcs_repo)
 
 print(
@@ -125,6 +118,18 @@ new_ws.modify(terraform_version="0.11.10")
 print(
     f"After modifying version of workspace named '{new_ws.name}': {new_ws.terraform_version}"
 )
+
+print(f"Assign ssh-key {my_sshkey.name}")
+new_ws.assign("ssh-key", my_sshkey)
+input(f"check key of {new_ws.name}")
+
+new_ws.unassign("ssh-key")
+input(f"check unassigned key of {new_ws.name}")
+
+for sshkey in my_org.ssh_keys:
+    print("sshkey:", sshkey.id)
+    if re.match(test_org_prefix + "sshkey" + r"\d{5}", sshkey.name):
+        my_org.delete(sshkey)
 
 input("Press Enter to continue")
 
