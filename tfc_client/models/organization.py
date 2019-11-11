@@ -38,12 +38,3 @@ class OrganizationModel(AttributesModel):
     saml_enabled: Optional[bool]
     two_factor_conformant: Optional[str]
     preview_request: Optional[bool]
-
-
-class OrganizationDataModel(KebabCaseBaseModel):
-    type: str = "organizations"
-    attributes: OrganizationModel
-
-
-class OrganizationRootModel(KebabCaseBaseModel):
-    data: OrganizationDataModel
