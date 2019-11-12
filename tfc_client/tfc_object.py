@@ -1,4 +1,5 @@
 from collections.abc import Mapping, Iterable
+import importlib
 from typing import Any, Dict, Generator, List, NoReturn, Optional, TYPE_CHECKING
 
 from .util import InflectionStr
@@ -25,6 +26,7 @@ class TFCObject(object):
     :type init_from_data: bool
     """
 
+    MODELS_MODULE = "tfc_client.models"
     can_create = None
     url_prefix = ""
 
@@ -43,6 +45,8 @@ class TFCObject(object):
         self.attrs["ssh-keys"] = dict()
         self.id = data["id"]
         self.type = data["type"]
+        self._model = None
+
         if init_from_data:
             self._init_from_data(data)
 
@@ -57,8 +61,19 @@ class TFCObject(object):
     def _init_from_data(self, data: Mapping) -> NoReturn:
         if "attributes" in data:
             self.attributes = data["attributes"]
+            model_class_name = "{}Model".format(
+                InflectionStr(self.type).underscore.singularize.camelize
+            )
+            module = importlib.import_module(TFCObject.MODELS_MODULE)
+            try:
+                model_class = getattr(module, model_class_name)
+                self._model = model_class(**data["attributes"])
+            except AttributeError:
+                pass
+
         if "relationships" in data:
             self.relationships = data["relationships"]
+
         if "links" in data:
             self.links = data["links"]
 
@@ -125,7 +140,9 @@ class TFCObject(object):
     def __getattr__(self, key):
         key_dash = InflectionStr(key).dasherize
 
-        if key_dash in self.attributes:
+        if self._model and key in self._model.__fields_set__:
+            return getattr(self._model, key)
+        elif key_dash in self.attributes:
             return self.attributes[key_dash]
         elif self.relationships and key_dash in self.relationships:
             return self.relationships[key_dash]

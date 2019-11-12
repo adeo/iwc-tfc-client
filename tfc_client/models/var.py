@@ -1,8 +1,6 @@
 from typing import Optional, List
-from . import KebabCaseBaseModel
-from .data import AttributesModel
-from .relationship import RelationshipsModel
 
+from .data import AttributesModel
 from ..enums import VarCat
 
 

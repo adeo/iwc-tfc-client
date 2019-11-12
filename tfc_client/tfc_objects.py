@@ -61,10 +61,10 @@ class Creatable(Mixin):
                 self.status_counts = api_response.meta["status-counts"]
             for element in api_response.data:
                 tfc_object = self.client.factory(element)
-                if object_type not in self.attrs:
-                    self.attrs[object_type] = dict()
-                self.attrs[object_type][tfc_object.id] = tfc_object
-                yield self.attrs[object_type][tfc_object.id]
+                if tfc_object.type not in self.attrs:
+                    self.attrs[tfc_object.type] = dict()
+                self.attrs[tfc_object.type][tfc_object.id] = tfc_object
+                yield self.attrs[tfc_object.type][tfc_object.id]
 
     def create(self, object_type: str, url_prefix: str = None, **kwargs) -> TFCObject:
         if self.can_create:
@@ -85,7 +85,7 @@ class Creatable(Mixin):
                 model_class_name = "{type}Model".format(
                     type=InflectionStr(object_type).underscore.camelize.singularize
                 )
-                module = importlib.import_module("tfc_client.models")
+                module = importlib.import_module(TFCObject.MODELS_MODULE)
                 model_class = getattr(module, model_class_name)
                 object_attributes = dict()
                 relationships = dict()
@@ -128,7 +128,7 @@ class Modifiable(Mixin):
         model_class_name = "{type}Model".format(
             type=InflectionStr(self.type).underscore.camelize.singularize
         )
-        module = importlib.import_module("tfc_client.models")
+        module = importlib.import_module(TFCObject.MODELS_MODULE)
         model_class = getattr(module, model_class_name)
 
         model = model_class(**kwargs)
@@ -213,7 +213,7 @@ class TFCRun(TFCObject):
         start_time = time.time()
         while True:
             duration = int(time.time() - start_time)
-            if RunStatus(self.status) in target_status:
+            if self.status in target_status:
                 return True
 
             if duration <= timeout:

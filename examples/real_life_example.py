@@ -65,8 +65,9 @@ client = TFCClient(team_token)
 
 print(f"OAuth-token: {github_oauth}")
 ot = client.get("oauth-token", github_oauth)
-print(ot.created_at)
 
+# Known attribute are casted to be conform with the model
+print(type(ot.created_at), ot.created_at)
 
 my_org = client.get("organization", org_id)
 
@@ -89,9 +90,9 @@ for ws in my_org.workspaces_search(
     print("   vcs_repo:", ws.vcs_repo)
     print(" - current run info...")
     try:
-        print("   - created-at => ", ws.current_run.created_at)
-        print("   - message =>", ws.current_run.message)
-        print("   - status =>", ws.current_run.status)
+        print("   - created-at => {}".format(ws.current_run.created_at))
+        print("   - message => {}".format(ws.current_run.message))
+        print("   - status => {}".format(ws.current_run.status))
     except AttributeError:
         pass
     print(" - List variables")
@@ -99,7 +100,7 @@ for ws in my_org.workspaces_search(
 
     print(" - List runs")
     for run in ws.runs:
-        print("    •", run.status, run.created_at)
+        print("    • {} {}".format(run.status, run.created_at))
 
     print("=========================================")
 
@@ -132,17 +133,22 @@ my_notification = new_ws.create(
     triggers=[NotificationTrigger.created],
 )
 
+print("Current status of notifications:")
 for nc in new_ws.get_list("notification-configurations"):
     print(" * Notification:", nc.name)
     for nc_delivery in nc.delivery_responses:
-        print("   - {url} {code} {successful}".format(**nc_delivery))
+        nc_delivery_dict = nc_delivery.dict()
+        print("   - {url} {code} {successful} {sent-at}".format(**nc_delivery_dict))
 
+print("Launch a 'verify' on the notification configuration")
 my_notification.do_verify()
 
+print("New status of notifications:")
 for nc in new_ws.get_list("notification-configurations"):
     print(" * Notification:", nc.name)
     for nc_delivery in nc.delivery_responses:
-        print("   - {url} {code} {successful}".format(**nc_delivery))
+        nc_delivery_dict = nc_delivery.dict()
+        print("   - {url} {code} {successful} {sent-at}".format(**nc_delivery_dict))
 
 
 print(

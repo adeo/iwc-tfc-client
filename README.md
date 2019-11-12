@@ -68,7 +68,7 @@ my_ws = my_org.create(
 my_ws.assign("ssh-key", my_sshkey)
 
 # Unassign it with:
-# my_ws.assign("ssh-key")
+# my_ws.unassign("ssh-key")
 
 # Create a Notification configuration
 my_notification = new_ws.create(

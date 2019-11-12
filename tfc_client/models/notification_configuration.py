@@ -1,11 +1,20 @@
-from typing import Optional, List, Any
+from datetime import datetime
+from typing import Optional, List, Any, Dict
 
 from pydantic import HttpUrl
 
 from . import KebabCaseBaseModel
 from .data import AttributesModel
-from .relationship import RelationshipsModel
 from ..enums import NotificationTrigger, NotificationsDestinationType
+
+
+class DeliveryResponseModel(KebabCaseBaseModel):
+    url: HttpUrl
+    body: str
+    code: int
+    headers: Dict[str, List[str]]
+    sent_at: datetime
+    successful: bool
 
 
 class NotificationConfigurationModel(AttributesModel):
@@ -13,8 +22,8 @@ class NotificationConfigurationModel(AttributesModel):
     name: str
     url: HttpUrl
     destination_type: NotificationsDestinationType
-    token: str
+    token: Optional[str]
     triggers: List[NotificationTrigger]
-    delivery_responses: Optional[List[Any]]
-    created_at: Optional[str]
-    updated_at: Optional[str]
+    delivery_responses: Optional[List[DeliveryResponseModel]]
+    created_at: Optional[datetime]
+    updated_at: Optional[datetime]

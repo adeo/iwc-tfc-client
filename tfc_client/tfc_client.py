@@ -5,6 +5,7 @@ import re
 import time
 from typing import Generator, NoReturn
 
+from .exception import UnmanagedObjectTypeException
 from .models.data import DataModel, RootModel
 from .models.organization import OrganizationModel
 from .util import InflectionStr
@@ -28,6 +29,8 @@ class TFCClient(object):
     :param url: TFC API URL. Default: "https://app.terraform.io"
     :type url: str
     """
+
+    OBJECTS_MODULE = "tfc_client.tfc_objects"
 
     def __init__(self, token: str, url: str = "https://app.terraform.io"):
         headers = {
@@ -53,15 +56,18 @@ class TFCClient(object):
 
     @property
     def organizations(self) -> Generator[TFCObject, None, None]:
-        for api_response in self._api.get_list(path=f"organizations"):
+        for api_response in self._api.get_list(path="organizations"):
             for org_data in api_response.data:
                 yield self.factory(org_data)
 
     def factory(self, data: dict, include: str = None) -> TFCObject:
-        object_type = InflectionStr(data["type"])
-        class_name = "TFC{type}".format(
-            type=object_type.singularize.underscore.camelize
-        )
-        module = importlib.import_module("tfc_client.tfc_objects")
-        tfc_class = getattr(module, class_name)
-        return tfc_class(self, data, include)
+        if "id" not in data or "type" not in data:
+            raise UnmanagedObjectTypeException("No type and/or id in data")
+        object_type = InflectionStr(data["type"]).singularize.underscore.camelize
+        class_name = "TFC{type}".format(type=object_type)
+        module = importlib.import_module(TFCClient.OBJECTS_MODULE)
+        try:
+            tfc_class = getattr(module, class_name)
+            return tfc_class(client=self, data=data, include=include)
+        except AttributeError:
+            return TFCObject(client=self, data=data, include=include)
