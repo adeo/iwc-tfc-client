@@ -68,8 +68,8 @@ class APICaller(object):
         elif method in ["delete"] and response.status_code < 400:
             return True
         elif response.status_code > 400:
-            raise APIException(f"APIError code: {response.status_code}")
-        raise APIException(response_error)
+            raise APIException(f"APIError code: {response.status_code}", response)
+        raise APIException(response_error, response)
 
     @staticmethod
     def _dict_to_params(object_name: str, object_content: Mapping):

@@ -312,6 +312,10 @@ class TFCWorkspace(TFCObject, Paginable, Modifiable, Creatable, Assignable):
                 self.attrs["vars"] = dict()
             self.attrs["vars"][var_object.key] = var_object
 
+    @property
+    def variables(self):
+        return {var.key: var for var in self.vars}
+
     def create(self, object_type: str, url_prefix: str = None, **kwargs) -> TFCObject:
         object_type = InflectionStr(object_type).dasherize.pluralize
         if object_type in ["vars"]:
@@ -457,6 +461,9 @@ class TFCOrganization(TFCObject, Paginable, Modifiable, Creatable):
     @property
     def ssh_keys(self) -> Generator[TFCSshKey, None, None]:
         return self.get_list("ssh-keys")
+
+    def get(self, *args, **kwargs) -> "TFCObject":
+        return self.client.get(*args, **kwargs)
 
     def workspaces_search(
         self,

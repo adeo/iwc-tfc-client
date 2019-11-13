@@ -1,24 +1,10 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Dict
 
 from pydantic import EmailStr
 
 from . import KebabCaseBaseModel
 from .data import AttributesModel
-
-
-class OrganizationPermissionsModel(KebabCaseBaseModel):
-    can_update: bool
-    can_destroy: bool
-    can_create_team: bool
-    can_create_workspace: bool
-    can_manage_subscription: bool
-    can_update_oauth: bool
-    can_update_sentinel: bool
-    can_update_ssh_keys: bool
-    can_update_api_token: bool
-    can_traverse: bool
-    can_create_workspace_migration: Optional[bool]
 
 
 class OrganizationModel(AttributesModel):
@@ -34,7 +20,7 @@ class OrganizationModel(AttributesModel):
     enterprise_plan: Optional[str]
     plan_expired: Optional[str]
     cost_estimation_enabled: Optional[bool] = False
-    permissions: Optional[OrganizationPermissionsModel]
+    permissions: Optional[Dict[str, bool]]
     fair_run_queuing_enabled: Optional[bool]
     saml_enabled: Optional[bool]
     two_factor_conformant: Optional[str]

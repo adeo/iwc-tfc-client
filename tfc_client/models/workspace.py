@@ -19,6 +19,7 @@ class VCSRepoModel(KebabCaseBaseModel):
 
 class WorkspaceModel(AttributesModel):
     name: Optional[str]
+    created_at: Optional[datetime]
     auto_apply: Optional[bool] = False
     environment: Optional[str]
     locked: Optional[bool]

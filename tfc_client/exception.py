@@ -3,7 +3,9 @@ class TFCClientException(Exception):
 
 
 class APIException(TFCClientException):
-    pass
+    def __init__(self, message, response):
+        self.message = message
+        self.response = response
 
 
 class TFCObjectException(TFCClientException):
