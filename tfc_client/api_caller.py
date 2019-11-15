@@ -54,22 +54,17 @@ class APICaller(object):
 
         response = requester(url=url, headers=self._headers, *args, **kwargs)
 
-        if method in ["get", "post", "patch", "put"]:
-            response_json = response.json()
-            if response_json:
-                if "data" in response_json:
+        if response.status_code < 400 :
+            if method in ["get", "post", "patch", "put"]:
+                response_json = response.json()
+                if response_json and "data" in response_json:
                     return APIResponse(response_json)
-
-                elif "errors" in response_json:
-                    response_error = APIResponse(response_json)
-
-            if response.status_code < 400:
+                else:
+                    return True
+            elif method in ["delete"]:
                 return True
-        elif method in ["delete"] and response.status_code < 400:
-            return True
-        elif response.status_code > 400:
+        else:
             raise APIException(f"APIError code: {response.status_code}", response)
-        raise APIException(response_error, response)
 
     @staticmethod
     def _dict_to_params(object_name: str, object_content: Mapping):
@@ -133,7 +128,7 @@ class APICaller(object):
         if response.status_code < 400:
             return response.text
         else:
-            raise APIException("Error: {}".format(response.status_code))
+            raise APIException("Error: {}".format(response.status_code), response)
 
     def get(self, *args, **kwargs) -> Union[APIResponse, bool]:
         return self._call(method="get", **kwargs)
