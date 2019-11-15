@@ -171,7 +171,8 @@ class Loggable(Mixin):
     @property
     def log_colored(self) -> str:
         if "log" not in self.attrs:
-            self.attrs["log"] = self.client._api.get_raw(path=self.log_read_url)
+            # Remove the first caracter (it's control caracter ASCII 0x02)
+            self.attrs["log"] = self.client._api.get_raw(path=self.log_read_url)[1:]
         return self.attrs["log"]
 
     @property
