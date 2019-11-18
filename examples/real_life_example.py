@@ -66,8 +66,9 @@ client = TFCClient(team_token)
 print(f"OAuth-token: {github_oauth}")
 ot = client.get("oauth-token", github_oauth)
 
+print(ot.created_at)
 # Known attribute are casted to be conform with the model
-print(type(ot.created_at), ot.created_at)
+print(type(ot.created_at))
 
 my_org = client.get("organization", org_id)
 
@@ -215,7 +216,7 @@ def tail_plan_log(duration, run):
     if len(last_lines) < nb_lines:
         print(f"{clear_after}\n" * (nb_lines - len(last_lines)), end="")
     print("============================8<===================================")
-    print(f"{goto_line(nb_lines+2)}", end="")
+    print(f"{goto_line(nb_lines+3)}", end="")
 
 
 def tail_apply_log(duration, run):
@@ -230,7 +231,7 @@ def tail_apply_log(duration, run):
     if len(last_lines) < nb_lines:
         print(f"{clear_after}\n" * (nb_lines - len(last_lines)), end="")
     print("============================8<===================================")
-    print(f"{goto_line(nb_lines+2)}", end="")
+    print(f"{goto_line(nb_lines+3)}", end="")
 
 
 my_run.wait_plan(sleep_time=1, timeout=200, progress_callback=tail_plan_log)
@@ -248,6 +249,6 @@ except tfc_client.exception.APIException:
     print("Can't apply (plan not finish). Pass...")
 
 for ws in my_org.workspaces_search(search=test_ws_prefix):
-    if re.match(test_ws_prefix + r"\d{5}", ws.name):
+    if ws.vcs_repo.identifier == null_resource_project:
         print("delete", ws.id, ws.name)
         my_org.delete(ws)

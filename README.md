@@ -2,6 +2,8 @@
 
 Try to offer a good python object interface to Terraform Cloud API.
 
+[![PyPI version](https://badge.fury.io/py/tfc-client.svg)](https://badge.fury.io/py/tfc-client)
+[![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 ## Quick start
 
 ```python
@@ -45,6 +47,10 @@ for ws in my_org.workspaces_search(include="current-run"):
     print(f"{ws.name} -> {ws.current_run.status}")
 
 # To create a workspace linked with a github repository
+
+# To create the binding between TFC and GitHub (to create a oauth_token_id):
+# See: https://www.terraform.io/docs/cloud/vcs/github.html
+
 # First: Create the repository object:
 vcs_repo = VCSRepoModel(
     identifier="github/repo",

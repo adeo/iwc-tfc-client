@@ -8,8 +8,10 @@ import requests
 import tfc_client
 from tfc_client.models.workspace import VCSRepoModel
 
+
 def get_organization_json(org_id):
-    SAMPLE_ORGANIZATION = Template("""{
+    SAMPLE_ORGANIZATION = Template(
+        """{
         "data": {
             "id": "$org_id",
             "type": "organizations",
@@ -38,13 +40,15 @@ def get_organization_json(org_id):
             "self": "/api/v2/organizations/$org_id"
             }
         }
-    }""")
+    }"""
+    )
     return SAMPLE_ORGANIZATION.substitute(org_id=org_id)
 
 
 def get_workspace_json(name, org_id):
     ws_id = f"ws-{name}"
-    SAMPLE_WORKSPACE = Template("""{
+    SAMPLE_WORKSPACE = Template(
+        """{
         "data": {
             "id": "$ws_id",
             "type": "workspaces",
@@ -98,28 +102,42 @@ def get_workspace_json(name, org_id):
             "self": "/api/v2/organizations/$org_id/workspaces/$name"
             }
         }
-    }""")
+    }"""
+    )
     return SAMPLE_WORKSPACE.substitute(name=name, org_id=org_id, ws_id=ws_id)
+
 
 def register_requests_mock(requests_mock, method, url, text):
     getattr(requests_mock, method)(url, text=text)
+
 
 class TestTFCClient(object):
     def test_get(self, requests_mock):
         org_id = "hashicorp"
         # requests_mock.get("/api/v2/organizations/hashicorp", text=get_organization_json(org_id=org_id))
-        register_requests_mock(requests_mock, "get", "/api/v2/organizations/hashicorp", text=get_organization_json(org_id=org_id))
+        register_requests_mock(
+            requests_mock,
+            "get",
+            "/api/v2/organizations/hashicorp",
+            text=get_organization_json(org_id=org_id),
+        )
         tfc = tfc_client.TFCClient(token="token")
         org = tfc.get("organization", id=org_id)
         assert org.name == org_id
         assert isinstance(org.created_at, datetime.datetime)
 
+
 class TestTFCOrganization(object):
     def test_create_workspace(self, requests_mock):
         org_id = "hashicorp"
         ws_name = "workspace1"
-        requests_mock.get(f"/api/v2/organizations/{org_id}", text=get_organization_json(org_id=org_id))
-        requests_mock.post(f"/api/v2/organizations/{org_id}/workspaces", text=get_workspace_json(name=ws_name, org_id=org_id))
+        requests_mock.get(
+            f"/api/v2/organizations/{org_id}", text=get_organization_json(org_id=org_id)
+        )
+        requests_mock.post(
+            f"/api/v2/organizations/{org_id}/workspaces",
+            text=get_workspace_json(name=ws_name, org_id=org_id),
+        )
         tfc = tfc_client.TFCClient(token="token")
         org = tfc.get("organization", id=org_id)
         vcs_repo = VCSRepoModel(
@@ -127,6 +145,8 @@ class TestTFCOrganization(object):
             oauth_token_id="ot-hmAyP66qk2AMVdbJ",
             branch="",
         )
-        ws = org.create("workspace", name=ws_name, terraform_version="0.10.8", vcs_repo=vcs_repo)
+        ws = org.create(
+            "workspace", name=ws_name, terraform_version="0.10.8", vcs_repo=vcs_repo
+        )
         assert ws.name == ws_name
         assert isinstance(ws.created_at, datetime.datetime)

@@ -12,24 +12,18 @@ class KebabCaseBaseModel(BaseModel):
         }
         super().__init__(*args, **dashed_kwargs)
 
-
     def json(self, *, by_alias=True, **kwargs):
         # Manage pydantic<v1.0 compatibility
         # https://pydantic-docs.helpmanual.io/usage/exporting_models/#modeljson
         if "skip_defaults" not in kwargs and "exclude_unset" not in kwargs:
             kwargs["exclude_unset"] = True
         try:
-            return super().json(
-                by_alias=by_alias, **kwargs
-            )
+            return super().json(by_alias=by_alias, **kwargs)
         except TypeError:
             if "exclude_unset" in kwargs:
                 kwargs["skip_defaults"] = True
                 del kwargs["exclude_unset"]
-            return super().json(
-                by_alias=by_alias, **kwargs
-            )
-
+            return super().json(by_alias=by_alias, **kwargs)
 
     def dict(self, *, by_alias=True, **kwargs):
         # Manage pydantic<v1.0 compatibility
@@ -37,16 +31,12 @@ class KebabCaseBaseModel(BaseModel):
         if "skip_defaults" not in kwargs and "exclude_unset" not in kwargs:
             kwargs["exclude_unset"] = True
         try:
-            return super().dict(
-                by_alias=by_alias, **kwargs
-            )
+            return super().dict(by_alias=by_alias, **kwargs)
         except TypeError:
             if "exclude_unset" in kwargs:
                 kwargs["skip_defaults"] = True
                 del kwargs["exclude_unset"]
-            return super().dict(
-                by_alias=by_alias, **kwargs
-            )
+            return super().dict(by_alias=by_alias, **kwargs)
 
 
 from .workspace import WorkspaceModel, VCSRepoModel
