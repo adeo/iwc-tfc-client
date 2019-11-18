@@ -1,7 +1,10 @@
 from datetime import datetime
 from typing import Optional, List, Dict
 
-from pydantic import HttpUrl
+try:
+    from pydantic import HttpUrl
+except ImportError:
+    from typing import AnyStr as HttpUrl
 
 from . import KebabCaseBaseModel
 from .data import AttributesModel

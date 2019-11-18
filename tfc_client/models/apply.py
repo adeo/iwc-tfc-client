@@ -1,7 +1,10 @@
 from datetime import datetime
 from typing import Optional, Dict
 
-from pydantic import HttpUrl
+try:
+    from pydantic import HttpUrl
+except ImportError:
+    from typing import AnyStr as HttpUrl
 
 from ..enums import RunStatus
 from .data import AttributesModel

@@ -34,7 +34,7 @@ setuptools.setup(
     tests_require=["pytest", "pytest-cov"],
     install_requires=[
         "requests",
-        "pydantic",
+        "pydantic>=0.32.2",
         "pydantic[email]",
         "email-validator>=1.0.3",
         "idna>=2.0.0",
