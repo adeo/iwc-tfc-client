@@ -188,9 +188,3 @@ Currently the following endpoints are supported:
   - [x] Force Unlock
   - [x] Assigh SSH key
   - [x] Unassign SSH key
-- [ ] [Admin Organizations](https://www.terraform.io/docs/cloud/api/admin/organizations.html)
-- [ ] [Admin Runs](https://www.terraform.io/docs/cloud/api/admin/runs.html)
-- [ ] [Admin Settings](https://www.terraform.io/docs/cloud/api/admin/settings.html)
-- [ ] [Admin Terraform Versions](https://www.terraform.io/docs/cloud/api/admin/terraform-versions.html)
-- [ ] [Admin Users](https://www.terraform.io/docs/cloud/api/admin/users.html)
-- [ ] [Admin Workspaces](https://www.terraform.io/docs/cloud/api/admin/workspaces.html)

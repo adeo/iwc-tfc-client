@@ -89,6 +89,7 @@ class TFCObject(object):
 
     def refresh(self) -> NoReturn:
         self.attrs = dict()
+        self._model = None
         self.attrs["workspaces"] = dict()
         self.attrs["runs"] = dict()
         self.attrs["vars"] = dict()

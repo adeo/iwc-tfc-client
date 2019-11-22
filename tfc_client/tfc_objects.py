@@ -290,8 +290,7 @@ class TFCWorkspace(TFCObject, Paginable, Modifiable, Creatable, Assignable):
 
     def get_list(
         self, object_type: str, filters: Mapping = None, url_prefix=None
-    ) -> Generator["TFCWorkspace", None, None]:
-        object_type = InflectionStr(object_type).dasherize.pluralize
+    ) -> Generator[TFCObject, None, None]:
         if url_prefix is None:
             url_prefix = f"{self.type}/{self.id}"
         return super().get_list(object_type, filters=filters, url_prefix=url_prefix)
