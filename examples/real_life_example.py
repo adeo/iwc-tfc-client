@@ -97,7 +97,7 @@ for ws in my_org.workspaces_search(
     except AttributeError:
         pass
     print(" - List variables")
-    print("   -->", ", ".join([var.key for var in ws.vars]))
+    print("   -->", ", ".join(ws.variables.keys()))
 
     print(" - List runs")
     for run in ws.runs:
