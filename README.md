@@ -127,7 +127,7 @@ Currently the following endpoints are supported:
 - [x] [Applies](https://www.terraform.io/docs/cloud/api/applies.html)
 - [ ] [Configuration Versions](https://www.terraform.io/docs/enterprise/api/configuration-versions.html)
 - [ ] [Cost Estimates](https://www.terraform.io/docs/cloud/api/cost-estimates.html)
-- [x] [Notification Configurations](terraform.io/docs/cloud/api/notification-configurations.html)
+- [x] [Notification Configurations](https://terraform.io/docs/cloud/api/notification-configurations.html)
   - [x] List
   - [x] Show
   - [x] Create

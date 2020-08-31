@@ -21,12 +21,12 @@ class DeliveryResponseModel(KebabCaseBaseModel):
 
 
 class NotificationConfigurationModel(AttributesModel):
-    enabled: bool = True
-    name: str
-    url: HttpUrl
-    destination_type: NotificationsDestinationType
-    token: Optional[str]
-    triggers: List[NotificationTrigger]
+    enabled: Optional[bool] = True
+    name: Optional[str]
+    url: Optional[HttpUrl]
+    destination_type: Optional[NotificationsDestinationType]
+    token: Optional[Optional[str]]
+    triggers: Optional[List[NotificationTrigger]]
     delivery_responses: Optional[List[DeliveryResponseModel]]
     created_at: Optional[datetime]
     updated_at: Optional[datetime]

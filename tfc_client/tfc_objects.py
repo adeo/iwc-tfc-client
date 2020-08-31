@@ -134,13 +134,17 @@ class Modifiable(Mixin):
         model = model_class(**kwargs)
         payload = RootModel(data=DataModel(type=self.type, attributes=model))
         path = f"{self.type}/{self.id}"
-
         api_response = self.client._api.patch(path=path, data=payload.json())
-        self.refresh()
         # Special case for organizations renaming ...
         # For organization, id == name
-        if "id" in api_response.data and api_response.data["id"] != self.id:
+        if (
+            hasattr(api_response, "data")
+            and "id" in api_response.data
+            and api_response.data["id"] != self.id
+        ):
             self.id = api_response.data["id"]
+
+        self.refresh()
         return self
 
 
@@ -184,7 +188,7 @@ class TFCVar(TFCObject, Modifiable):
     type = "vars"
 
 
-class TFCNotificationConfiguration(TFCObject):
+class TFCNotificationConfiguration(TFCObject, Modifiable):
     type = "notification-configurations"
 
     def do_verify(self) -> bool:
