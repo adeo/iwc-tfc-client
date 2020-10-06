@@ -3,8 +3,7 @@ import hashlib
 import importlib
 import re
 import time
-from io import BytesIO
-from typing import Generator, List, Callable, TYPE_CHECKING, Union
+from typing import BinaryIO, Generator, List, Callable, TYPE_CHECKING, Union
 
 import requests
 
@@ -425,7 +424,7 @@ class TFCStateVersion(TFCObject):
 class TFCConfigurationVersion(TFCObject):
     type = "configuration-versions"
 
-    def upload(self, data: Union[bytes, BytesIO]) -> None:
+    def upload(self, data: Union[bytes, BinaryIO]) -> None:
         resp = requests.put(
             self.upload_url, data,
             headers={'Content-Type': 'application/octet-stream'})
