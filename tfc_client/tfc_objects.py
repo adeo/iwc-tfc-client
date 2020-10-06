@@ -290,7 +290,8 @@ class TFCRun(TFCObject):
 
 class TFCWorkspace(TFCObject, Paginable, Modifiable, Creatable, Assignable):
     type = "workspaces"
-    can_create = ["vars", "runs", "notification-configurations"]
+    can_create = ["vars", "runs", "notification-configurations",
+                  "configuration-versions"]
 
     def get_list(
         self, object_type: str, filters: Mapping = None, url_prefix=None
@@ -328,7 +329,7 @@ class TFCWorkspace(TFCObject, Paginable, Modifiable, Creatable, Assignable):
         if object_type in ["runs", "vars"]:
             url_prefix = ""
             kwargs["workspace"] = self
-        if object_type in ["notification-configurations"]:
+        if object_type in ["notification-configurations", "configuration-versions"]:
             url_prefix = f"workspaces/{self.id}"
         if object_type in ["runs"]:
             if not kwargs["message"]:
