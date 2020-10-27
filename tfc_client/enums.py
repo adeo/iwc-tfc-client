@@ -5,17 +5,25 @@ class RunStatus(str, Enum):
     def _generate_next_value_(name, start, count, last_values):
         return name
 
-    applied = auto()
-    applying = auto()
-    canceled = auto()
-    discarded = auto()
-    errored = auto()
     pending = auto()
     plan_queued = auto()
-    planned = auto()
-    planned_and_finished = auto()
     planning = auto()
-
+    planned = auto()
+    cost_estimating = auto()
+    cost_estimated = auto()
+    policy_checking = auto()
+    policy_override = auto()
+    policy_soft_failed = auto()
+    policy_checked = auto()
+    confirmed = auto()
+    planned_and_finished = auto()
+    apply_queued = auto()
+    applying = auto()
+    applied = auto()
+    discarded = auto()
+    errored = auto()
+    canceled = auto()
+    force_canceled = auto()
 
 class WorkspaceSort(str, Enum):
     name = "name"
