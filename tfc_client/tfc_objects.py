@@ -3,7 +3,9 @@ import hashlib
 import importlib
 import re
 import time
-from typing import Generator, List, Callable, TYPE_CHECKING
+from typing import BinaryIO, Generator, List, Callable, TYPE_CHECKING, Union
+
+import requests
 
 from .models.data import RootModel, DataModel, AssignModel
 from .models.run import RunModel
@@ -290,7 +292,8 @@ class TFCRun(TFCObject):
 
 class TFCWorkspace(TFCObject, Paginable, Modifiable, Creatable, Assignable):
     type = "workspaces"
-    can_create = ["vars", "runs", "notification-configurations"]
+    can_create = ["vars", "runs", "notification-configurations",
+                  "configuration-versions"]
 
     def get_list(
         self, object_type: str, filters: Mapping = None, url_prefix=None
@@ -328,7 +331,7 @@ class TFCWorkspace(TFCObject, Paginable, Modifiable, Creatable, Assignable):
         if object_type in ["runs", "vars"]:
             url_prefix = ""
             kwargs["workspace"] = self
-        if object_type in ["notification-configurations"]:
+        if object_type in ["notification-configurations", "configuration-versions"]:
             url_prefix = f"workspaces/{self.id}"
         if object_type in ["runs"]:
             if not kwargs["message"]:
@@ -420,6 +423,12 @@ class TFCStateVersion(TFCObject):
 
 class TFCConfigurationVersion(TFCObject):
     type = "configuration-versions"
+
+    def upload(self, data: Union[bytes, BinaryIO]) -> None:
+        resp = requests.put(
+            self.upload_url, data,
+            headers={'Content-Type': 'application/octet-stream'})
+        resp.raise_for_status()
 
 
 class TFCUser(TFCObject):

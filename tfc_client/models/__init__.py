@@ -45,5 +45,6 @@ from .var import VarModel
 from .run import RunModel
 from .data import DataModel
 from .ssh_key import SshKeyModel
+from .configuration_version import ConfigurationVersionModel
 from .notification_configuration import NotificationConfigurationModel
 from .oauth_token import OauthTokenModel
